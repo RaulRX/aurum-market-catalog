@@ -1,0 +1,329 @@
+# Configuración de la ejecución — Aurum Market
+# Se completa notebook a notebook. Cada decisión D0x/R0x se escribe aquí
+# en cuanto se ratifica (docs/PLAN.md § Protocolo de trabajo).
+
+nb00_datos:
+  d01_relevancia_recall_mrr: E_mas_S  # E | E_mas_S — qué cuenta como relevante para Recall@10/MRR@10 (nDCG usa E=3,S=2,C=1,I=0 siempre)
+  d02_politica_nulos_texto: omitir_seccion  # omitir_seccion | cadena_vacia | literal_desconocido
+  d03_brand_almacenada: raw  # brand se guarda tal cual en el payload, nunca se normaliza en almacenamiento/texto compuesto
+  d03_normalizacion_marca_busqueda: casefold_unaccent  # raw | casefold | casefold_unaccent — se aplica en tiempo de búsqueda/filtro (NB05), no al dato guardado
+  d04_alcance_evaluacion: catalogo_completo  # catalogo_completo | pool_juzgado — un producto recuperado no juzgado puntúa Irrelevant (0), sin recolocar posiciones
+
+nb01_baseline:
+  d05_baselines: [tfidf, bm25]  # tfidf | bm25 | lsa | exact_title — BM25 entra porque es el estándar IR y el único que trata la longitud de documento de otra forma que TF-IDF
+  d05b_strip_accents: true  # el índice guarda las palabras sin acentos: 'tactil' pasa de 10 a 326 registros en el catálogo completo
+  d05c_campo_indexado: text  # text | title — 'text' ya contiene el título; es además la plantilla A0 que usará NB02, así que léxico y denso comparan sobre el mismo texto
+  top_k: 10
+  metricas_ciegas: jaccard_at_10  # las 12 consultas de evaluación no tienen juicios: nDCG es incalculable, se mide coherencia entre formulaciones
+
+nb02_modelo:
+  # Orden intercambiado respecto al plan original: el modelo se decide ANTES que la
+  # plantilla. Congelar la plantilla en A0 (la columna `text` tal cual) no es una
+  # elección de diseño; congelar un modelo sí lo habría sido. Ver docs/PLAN.md.
+  plantilla_congelada: A0
+  corpus_comparacion: catalogo_muestra  # condición 3; el ganador se confirma sobre el catálogo completo
+
+  d09_modelos:
+    - id: gemini-embedding-2
+      proveedor: google_api            # clave en GEMINI_API_KEY (nunca en el repo)
+      dim_nativa: 3072
+      ventana_tokens: 8192
+      contrato_entrada: instruccion_en_prompt  # Embedding 2 NO admite task_type (eso es de gemini-embedding-001)
+      normalizacion: automatica_al_truncar     # la API ya devuelve normalizado al reducir dimensión
+    - id: jinaai/jina-embeddings-v3
+      proveedor: hugging_face          # abierto, pero OJO a la licencia
+      licencia: cc-by-nc-4.0           # NO COMERCIAL: no bloquea el experimento, sí la
+                                       # recomendación final para un marketplace real
+      parametros: 572.3M               # el más caro de codificar en CPU
+      dim_nativa: 1024                 # verificado: config.hidden_size
+      ventana_tokens: 8192             # verificado: config.max_position_embeddings = 8194
+      requiere_trust_remote_code: true # el corrector ejecutaría código del repositorio
+      contrato_entrada: adaptadores_lora_por_tarea  # no son prefijos de texto: son pesos distintos
+      adaptadores:                     # verificado: config.lora_adaptations
+        busqueda_consulta: retrieval.query    # "Represent the query for retrieving evidence documents: "
+        busqueda_documento: retrieval.passage # "Represent the document for retrieval: "
+        duplicados: text-matching             # simétrico (registro contra registro), sin instrucción
+      mrl: si                          # verificado: config.matryoshka_dimensions = [32,64,128,256,512,768,1024]
+    - id: ibm-granite/granite-embedding-311m-multilingual-r2
+      proveedor: hugging_face          # Apache-2.0, abierto
+      parametros: 311.7M
+      dim_nativa: 768                  # verificado: config.hidden_size
+      ventana_tokens: 32768            # verificado: config.max_position_embeddings (ModernBERT)
+      contrato_entrada: ninguno   # confirmado en la model card, no solo en el config (P02 cerrado)
+      contrato_evidencia: >
+        Doble evidencia, en este orden. (1) Configuración:
+        config_sentence_transformers.json declara prompts:
+        {"query": "", "document": ""} — los dos son la cadena vacía, así que
+        codificar con y sin contrato daría vectores idénticos. (2) Fuente primaria:
+        la model card completa de IBM no documenta ninguna instrucción ni prefijo
+        en ninguno de sus backends (sentence-transformers, Transformers, ONNX,
+        OpenVINO, vLLM, GGUF), y en su ejemplo de retrieval cross-lingual
+        input_queries e input_passages van directos a model.encode() sin nada
+        antepuesto — a diferencia de e5-instruct o los BGE con instrucciones.
+        El contrato real es texto plano simétrico, así que granite NO entra en el
+        eje "prefijos" de d10_ejes y NO compitió en desventaja. Ver pendientes.P02.
+      normalizacion: modulo_2_Normalize   # el modelo ya devuelve vectores unitarios
+      pooling: cls                        # verificado: 1_Pooling/config.json
+      mrl: si                          # etiqueta `matryoshka` en el repo
+
+  d09_dimensiones:
+    comunes: [768, 512, 256, 128]  # los tres las admiten -> puntos comparables entre sí
+    nativas_adicionales:
+      gemini-embedding-2: [3072, 1536]
+      jinaai/jina-embeddings-v3: [1024]
+
+  # D09b · Fijado ANTES de ver ninguna métrica (el enunciado penaliza lo contrario).
+  d09b_criterio_desempate:
+    forma: mas_barata_dentro_de_tolerancia
+    metrica_primaria: ndcg_at_10   # media macro sobre las 8 consultas de desarrollo
+    tolerancia_tau: 0.02           # cuánta calidad se acepta ceder a cambio de menor dimensión;
+                                   # 0,02 es aproximadamente el suelo de ruido con solo 8 consultas
+    procedimiento:
+      - "B = mejor ndcg_at_10 de toda la tabla (modelo x dimensión)"
+      - "admisibles = configuraciones con ndcg_at_10 >= B - tolerancia_tau"
+      - "gana la admisible de MENOR dimensión"
+      - "empate a dimensión -> gana la de mayor ndcg_at_10"
+      - "empate también ahí -> gana la de menor tiempo de codificación"
+
+  d10_ejes:
+    prefijos: medir_con_y_sin_donde_exista  # único eje que obliga a recodificar (x2 codificaciones).
+                                            # granite queda fuera: no tiene contrato que retirar,
+                                            # confirmado en su model card (P02 cerrado)
+    normalizacion_l2: verificar            # gratis: post-proceso sobre los mismos vectores
+    metrica: [cosine, dot, l2]             # gratis; con L2, cosine y dot deben dar el MISMO ranking
+    dimension_mrl: barrer                  # gratis: truncar + renormalizar, no se recodifica
+
+  d11_api_embeddings: si  # gemini-embedding-2 compite en igualdad de condiciones.
+                          # Consecuencia aceptada: si gana, reproducir el índice desde cero
+                          # exige clave de Google. Se documenta en el README.
+
+  # ⚠️ PENDIENTES DE NB02 — R02 no se puede ratificar sin cerrar los tres.
+  # Se anotan aquí y no en una nota mental porque los tres son fáciles de saltarse
+  # y los tres invalidan la decisión si se saltan.
+  pendientes:
+    - id: P01
+      que: Confirmar el modelo ganador sobre el catálogo completo, no solo sobre la muestra.
+      estado: parcial   # confirmado denso-vs-lexico y la dimension; falta el orden entre densos
+      resuelto_hasta_ahora: >
+        NB02 seccion I recodifico al ganador (gemini-2 [sin_contrato]) sobre los 15.000
+        productos y lo evaluo contra el baseline lexico ya medido sobre ese mismo corpus.
+        El orden se mantiene: 0.5894 frente a 0.5088 de BM25, con Recall@10 de 0.2632
+        frente a 0.1841. La ventaja se comprime de +0.1206 a +0.0806. Ademas @768 supera
+        a @3072 (0.5894 vs 0.5849), asi que la eleccion de dimension de D09b se confirma
+        a escala real.
+      lo_que_falta: >
+        El orden ENTRE modelos densos a escala completa. Recodificar jina-v3 y
+        granite-311m-r2 sobre 15.000 docs son ~16 h y ~49 h de CPU (extrapolacion lineal
+        desde los tiempos medidos sobre la muestra). Queda declarado como limite del
+        experimento: con gemini-2 sacando 0.22 sobre granite en la muestra, el riesgo de
+        inversion es bajo, pero no es cero.
+      bloquea: [R02, NB04]
+      por_que: >
+        El barrido de NB02 corre sobre catalogo_muestra (1.500 docs) por la condición 3
+        del plan, pero el enunciado (§6, "Condiciones de comparabilidad") dice que
+        "el catálogo completo es el recorrido evaluado; la muestra sirve para desarrollar
+        y depurar". Un orden entre modelos medido con 1.500 candidatos NO garantiza el
+        mismo orden con 15.000: NB01 ya midió que BM25 cae de 0,6512 a 0,5088 de nDCG@10
+        al pasar de la muestra al catálogo completo, y TF-IDF de 0,5654 a 0,4129. Si dos
+        modelos quedan cerca en la muestra, 10x más distractores pueden invertirlos.
+      como: >
+        Re-ejecutar el bloque B de NB02 con CORPUS_ID="catalogo_productos" y corpus =
+        completo["text"], al menos para las dos configuraciones finalistas de la regla
+        D09b. La caché las distingue por SHA-256 del corpus, así que no pisa nada.
+      coste_estimado: 10x el tiempo de codificación de la muestra por configuración.
+
+    - id: P02
+      que: >
+        Averiguar el contrato de entrada REAL de granite-embedding-311m-multilingual-r2
+        en su model card / documentación de IBM, no solo en su fichero de configuración.
+      estado: cerrado   # revisada la model card completa: no hay instrucción documentada
+      bloquea: [R02, d10_ejes.prefijos]
+      por_que: >
+        NB02 excluye a granite del eje "con/sin prefijos" apoyándose en que
+        config_sentence_transformers.json declara los dos prompts como cadena vacía.
+        Eso demuestra que la librería no le añade nada, pero NO demuestra que el modelo
+        se entrenara sin instrucción: si IBM documenta una instrucción recomendada para
+        consultas, granite estaría compitiendo con una desventaja que nosotros le hemos
+        impuesto, y el enunciado (§3.1) avisa de que "no basta con citar la documentación
+        del modelo" — pero tampoco basta con no leerla.
+      resolucion: >
+        Revisada la model card completa de IBM (no solo el config), incluyendo todos los
+        ejemplos de uso (sentence-transformers, Transformers puro, ONNX, OpenVINO, vLLM,
+        GGUF) y las secciones "Usage" y "When to Use This Model". No hay ninguna
+        instrucción o prefijo documentado en ningún sitio del model card. En el ejemplo
+        de retrieval cross-lingual que IBM publica, tanto input_queries como
+        input_passages se pasan directamente a model.encode() sin ningún string de
+        instrucción prepended (nada tipo "Instruct: ...\nQuery: ..." como sí hacen
+        e5-instruct o los BGE con instrucciones). Mismo tratamiento para queries y
+        passages, sin distinción textual, en todos los backends documentados.
+      conclusion: >
+        El contrato de entrada real de granite-embedding-311m-multilingual-r2 es texto
+        plano simétrico, sin prefijo, confirmado por la fuente primaria y no por
+        inferencia de un JSON de configuración. La exclusión del eje de prefijos queda
+        sostenida por evidencia más fuerte que la que la motivó: no es solo que la
+        librería no le añada nada, es que IBM tampoco documenta ninguna instrucción
+        recomendada. granite NO compitió en desventaja.
+      como: >
+        Leer la model card de huggingface.co/ibm-granite/granite-embedding-311m-multilingual-r2
+        y el paper (arxiv:2605.13521). Si aparece una instrucción o prefijo recomendado,
+        granite entra en el eje de D10 y hay que recodificarlo en las dos variantes.
+      si_se_confirma_que_no_hay: anotar la fuente en el README y cerrar P02.
+
+    - id: P03
+      que: >
+        Decidir si los tiempos de codificacion de NB02 son fiables como criterio de
+        desempate, y remedirlos si llegan a usarse.
+      estado: cerrado   # la regla se resolvio por dimension; `segundos` no llego a usarse
+      resolucion: >
+        D09b ordeno las 3 configuraciones admisibles por dimension y quedaron
+        desempatadas ahi mismo (768 < 1536 < 3072), asi que el criterio `segundos`
+        nunca se evaluo. La sospecha sobre los tiempos sigue siendo valida y esta
+        documentada en el README, pero NO afecto a R02: no hace falta remedir.
+      bloquea: [R02]
+      por_que: >
+        granite-311m-r2 (311M parametros, dim 768) tardo 17.543 s en codificar los
+        1.500 documentos de la muestra, y jina-v3 (572M parametros, dim 1024) solo
+        5.005 s: el modelo con la mitad de parametros tardo 3,5x mas. La relacion
+        esta invertida y no la explica la longitud del texto (medianas de 278 y 293
+        tokens sobre el mismo corpus). Las hipotesis son ambientales -contencion de
+        CPU, throttling termico tras casi 5 h de carga, o presion de memoria porque
+        granite se codifico despues de jina en una maquina de 7,9 GB-, no
+        arquitectonicas. Importa porque d09b_criterio_desempate ordena por
+        `segundos` cuando dos configuraciones empatan en dimension: R02 se
+        ratificaria con un numero contaminado.
+      como: >
+        Se resuelve DESPUES de ver las metricas de calidad, no antes. Si la regla
+        D09b separa a los finalistas por ndcg_at_10 o por dim, `segundos` no llega a
+        usarse y P03 se cierra anotando que no afecto a R02. Si el desempate cae en
+        el tiempo, remedir los dos modelos seguidos, en la misma sesion y sin otra
+        carga: bastan 200 documentos por modelo para comparar textos/s.
+      coste_estimado: minutos si hay que remedir (200 docs por modelo), cero si no.
+
+nb03_representacion:
+  # Se invierte el montaje de NB02: alli el texto estaba congelado y variaba el
+  # modelo; aqui el modelo esta congelado y solo varia el texto (Regla 1).
+  corpus_comparacion: catalogo_muestra  # condicion 3; el ganador se confirma sobre el completo
+
+  modelo_congelado:                     # ganador de D09b, ratificado en R02
+    id: gemini-embedding-2
+    contrato: sin_contrato              # NB02 seccion D: retirarlo mejora por encima de 512 dims
+    dim: 768
+    metrica: cosine                     # D10: con vectores unitarios las tres empatan; cosine es la robusta
+    normalizacion: l2_explicita_al_truncar
+    top_k: 10
+
+  d06_plantillas:
+    - id: A0
+      texto: la columna `text` tal cual
+      por_que: es la que NB02 tuvo congelada; sin ella no hay punto de comparacion
+    - id: A1
+      texto: solo `title`
+      por_que: el extremo opuesto a A0 y la unica que no puede truncarse nunca
+    - id: A2
+      texto: title + brand + color, sin etiquetas
+      por_que: aisla si lo que aporta A3 es la informacion o la nomenclatura
+    - id: A3
+      texto: 'title + campos con etiqueta ("Marca: X. Color: Y."), omitiendo vacios'
+      por_que: replica la nomenclatura del `text` de origen aplicando D02
+    - id: A3n
+      rol: control                  # NO compite en R01; ver r01_criterio_desempate.alcance
+      controla: D02
+      texto: igual que A3 pero rellenando los vacios con "desconocido"
+      por_que: >
+        Control de D02. Esa decision se tomo por razonamiento -insertar un literal
+        compartido en el 36,6 % del catalogo crearia una senal comun artificial- pero
+        nunca se midio, y §3.1 no da por buena una justificacion sin datos. A3 frente a
+        A3n aisla exactamente la politica de nulos: sobre la muestra se diferencian en
+        7,9 caracteres de media, que son solo los "Color: desconocido" de los 549
+        productos sin color.
+      numerada_aparte: >
+        No es "A6" a proposito: no es otra receta de la secuencia sino el control de A3,
+        y el nombre deja ver contra quien se compara.
+    - id: A4
+      texto: recorte de `text` a 512 caracteres, en frontera de palabra
+      por_que: >
+        Unico punto intermedio entre A0 (1.309 chars de media) y A3 (151). Sin el, si A3
+        ganase a A0 no se sabria si el optimo esta en 150 o en 500 caracteres. No
+        antepone el titulo porque `text` ya empieza por `title` en el 100 % de las filas.
+    - id: A5
+      texto: A3 sin `color`
+      por_que: color falta en el 36,6 % de la muestra; mide si el campo aporta o estorba
+
+  # 🚨 Fijado ANTES de ver la tabla del barrido, igual que d09b.
+  r01_criterio_desempate:
+    forma: mas_corta_dentro_de_tolerancia
+    alcance: solo_plantillas_con_rol_candidata   # los controles quedan fuera
+    alcance_por_que: >
+      Una plantilla marcada con rol=control existe para poner a prueba una decision ya
+      tomada, no para aspirar a ser la elegida. Se codifica y se mide igual que el resto
+      -sin eso no habria con que contrastar- pero no entra en el conjunto sobre el que se
+      aplica la regla. El papel se declara junto a la definicion de la plantilla, en
+      aurum.plantillas.CONTROLES, y no en una celda del notebook: asi la exclusion es
+      auditable y no una decision tomada al ver la tabla.
+    alcance_evidencia: >
+      A3n es el unico control por ahora, y su exclusion no se sostiene solo en la
+      declaracion previa. NB03 seccion D midio la exposicion de cada consulta al relleno
+      -que porcentaje de sus productos relevantes tiene `color` vacio- y la contrasto con
+      cuanto se movio esa consulta. El resultado no sostiene que el relleno aporte
+      informacion: la ventaja no crece con la exposicion, la consulta cuyos relevantes
+      estan al 100% sin color es de las que menos se mueve, y dos consultas con la misma
+      exposicion difieren 6x en efecto. Lo unico que se sostiene es que exposicion nula
+      implica efecto nulo, que es mecanico: si el relleno no toca a ningun documento
+      relevante, el ranking no puede cambiar. Eso no es una relacion dosis-respuesta,
+      que es lo que exigiria la hipotesis de que rellenar aporta.
+    metrica_primaria: ndcg_at_10
+    tolerancia: 0.01          # la del plan para R01; d09b usa 0.02 para modelos
+    coste: chars_media        # menor gana
+    desempates: [ndcg_at_10]  # a igualdad de longitud, mayor calidad
+    procedimiento:
+      - B = mejor ndcg_at_10 de toda la tabla de plantillas
+      - admisibles = las que estan a menos de 0.01 de B
+      - entre las admisibles gana la de menor longitud media en caracteres
+      - a igualdad de longitud, la de mayor ndcg_at_10
+    por_que: >
+      El criterio buscado era "que diga mas con menos": densidad de significado. Pero
+      "representar mejor el producto" ES lo que mide ndcg_at_10, y el desempate solo se
+      activa cuando esa metrica ya ha declarado dos plantillas equivalentes. En ese punto
+      el significado esta empatado por medicion, asi que maximizar densidad se reduce
+      exactamente a minimizar el texto.
+    por_que_no_contar_campos: >
+      Se descarto ordenar por numero de campos del catalogo: no mide densidad. A1 usa un
+      campo y A2 usa tres, pero A2 podria decir mas por caracter. Contar columnas habla
+      de dependencia de datos, no de cuanto significado llevan — y ademas deja empates
+      dentro de cada grupo que habria que romper con un segundo criterio de todas formas.
+
+  # R01 · RATIFICADA sobre el catalogo completo, no sobre la muestra.
+  r01_plantilla_ganadora:
+    id: A4
+    texto: recorte de `text` por la mediana de longitud del corpus, en frontera de palabra
+    corte_chars: 936            # mediana de `text` en catalogo_productos (15.000)
+    decidida_sobre: catalogo_productos
+    por_que: >
+      Unica admisible dentro de la tolerancia de 0.01 sobre el catalogo completo. Gana por
+      ndcg_at_10 sobre las 8 consultas de desarrollo; el desempate por longitud no llego a
+      aplicarse porque ninguna otra entro en la banda.
+    el_orden_cambio_al_escalar: >
+      Sobre la muestra de 1.500 el barrido daba A1 (solo el titulo) como ganadora y A4
+      quedaba quinta. Sobre los 15.000 el orden se invierte: A4 primera, A1 tercera.
+      Ratificar con la muestra habria llevado a otra decision, y el error solo se habria
+      visto al reconstruir el indice. Las dos plantillas mas largas (A4 y A0) son las que
+      menos se degradan al escalar y las cortas las que mas: con diez veces mas candidatos
+      compitiendo por las mismas diez posiciones, una representacion de ~115 caracteres se
+      queda sin con que separar vecinos proximos.
+    margen: >
+      A0 queda fuera de la banda por 0.0012. Son dos plantillas practicamente empatadas y
+      la regla las separa por un margen muy fino: conviene tenerlo presente si cambia algo
+      del pipeline.
+
+  d07_chunking: no  # no entra la familia C
+  d07_evidencia: >
+    Decidido por medicion en NB02 seccion A, no por falta de tiempo: con el tokenizador
+    de cada modelo, pct_supera_ventana = 0 en los tres candidatos sobre los 15.000
+    registros. El maximo observado son 1.972 tokens frente a ventanas de 8.192 y 32.768,
+    mas de 4x de margen. El chunking solo resuelve un problema que aqui no existe.
+  d07_consecuencias: >
+    El punto de la base vectorial sigue siendo `record_id` en relacion 1:1 con el
+    producto: el esquema de NB04 se mantiene simple, la idempotencia no necesita borrar
+    chunks huerfanos, el top-10 no necesita deduplicar por producto y la regla de
+    duplicados de NB08 compara producto contra producto. D08 (agregacion chunk->producto)
+    queda sin aplicar.

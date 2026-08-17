@@ -1,0 +1,739 @@
+{
+  "configuracion": {
+    "campo_indexado": "text",
+    "strip_accents": true,
+    "top_k": 10,
+    "relevancia": {
+      "E": 3,
+      "S": 2,
+      "C": 1,
+      "I": 0
+    },
+    "umbral_relevante_recall_mrr": 2.0,
+    "gain_ndcg": "exponential"
+  },
+  "muestra": {
+    "n_docs": 1500,
+    "metricas": {
+      "tfidf": {
+        "precision_at_10": 0.6,
+        "recall_at_10": 0.2324,
+        "mrr_at_10": 0.875,
+        "ndcg_at_10": 0.5654
+      },
+      "bm25": {
+        "precision_at_10": 0.7125,
+        "recall_at_10": 0.313,
+        "mrr_at_10": 0.8906,
+        "ndcg_at_10": 0.6512
+      }
+    },
+    "por_consulta": {
+      "tfidf": [
+        {
+          "query_id": "13357",
+          "precision@10": 0.7,
+          "recall@10": 0.2258,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5006
+        },
+        {
+          "query_id": "18868",
+          "precision@10": 0.3,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.3634
+        },
+        {
+          "query_id": "28703",
+          "precision@10": 0.8,
+          "recall@10": 0.2051,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.7975
+        },
+        {
+          "query_id": "31224",
+          "precision@10": 0.5,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5712
+        },
+        {
+          "query_id": "33633",
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0254
+        },
+        {
+          "query_id": "38249",
+          "precision@10": 0.6,
+          "recall@10": 0.1714,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5343
+        },
+        {
+          "query_id": "43240",
+          "precision@10": 0.9,
+          "recall@10": 0.2571,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.7311
+        },
+        {
+          "query_id": "61533",
+          "precision@10": 1.0,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 1.0
+        }
+      ],
+      "bm25": [
+        {
+          "query_id": "13357",
+          "precision@10": 0.8,
+          "recall@10": 0.2581,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5441
+        },
+        {
+          "query_id": "18868",
+          "precision@10": 0.5,
+          "recall@10": 0.5556,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.527
+        },
+        {
+          "query_id": "28703",
+          "precision@10": 0.9,
+          "recall@10": 0.2308,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.8709
+        },
+        {
+          "query_id": "31224",
+          "precision@10": 0.5,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5777
+        },
+        {
+          "query_id": "33633",
+          "precision@10": 0.1,
+          "recall@10": 0.25,
+          "mrr@10": 0.125,
+          "ndcg@10": 0.1566
+        },
+        {
+          "query_id": "38249",
+          "precision@10": 0.9,
+          "recall@10": 0.2571,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.8125
+        },
+        {
+          "query_id": "43240",
+          "precision@10": 1.0,
+          "recall@10": 0.2857,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.7208
+        },
+        {
+          "query_id": "61533",
+          "precision@10": 1.0,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 1.0
+        }
+      ]
+    },
+    "rankings": {
+      "tfidf": {
+        "13357": [
+          "B093QP3335",
+          "B0937C9GTY",
+          "B06WV791ZY",
+          "B08DTXGJJW",
+          "B08L81WGD7",
+          "B099ZLJVVB",
+          "B01MV80F5C",
+          "B091BWS8VF",
+          "B0953QHV52",
+          "B09BW133YW"
+        ],
+        "18868": [
+          "B07H97VGBP",
+          "B071P9Y9GD",
+          "B072FRGG6S",
+          "B0818TKB98",
+          "B0818WGCXC",
+          "B0818K237B",
+          "B0818SNL38",
+          "B0818VQ544",
+          "B07GN7XRQ9",
+          "B0714N7942"
+        ],
+        "28703": [
+          "B08GYFBKD4",
+          "B08SWF4FZ2",
+          "B08PFJVLGD",
+          "B08RZ19NDS",
+          "B08TX2KN7L",
+          "B083BM815K",
+          "B014A8X7RU",
+          "B07TCMJQTF",
+          "B08BJRJFF5",
+          "B08Y5VXL32"
+        ],
+        "31224": [
+          "B07HP6XKC6",
+          "B01MU31H1P",
+          "B01L8L7KO8",
+          "B006Q8VAL8",
+          "B07YY3ZWCP",
+          "B00W4Z82ZO",
+          "B08SQC36GD",
+          "B000IHYS2Q",
+          "B07GVNHRRR",
+          "B00W46KQ5W"
+        ],
+        "33633": [
+          "B09DD8J2K8",
+          "B07XL9JR86",
+          "B07TXCSR5Y",
+          "B0161N7XAO",
+          "B01JADTEKE",
+          "B07L42QXVL",
+          "B07NY97H69",
+          "B07Z8N7Z3K",
+          "B07JFNQ1H4",
+          "B01GEHFGPQ"
+        ],
+        "38249": [
+          "B075CT3ZT8",
+          "B09BQTS4FF",
+          "B09874QBSH",
+          "B07F6QTVK4",
+          "B09BHVMCC3",
+          "B08Y8G4F6K",
+          "B00OXNEU5Q",
+          "B07C2TM76Y",
+          "B07JHCZ1T4",
+          "B082PR44HT"
+        ],
+        "43240": [
+          "B08DKWQD8R",
+          "B08PPFGGK3",
+          "B09CTXLHZS",
+          "B08KPYKNWZ",
+          "B07V8GBRPW",
+          "B08Q3KQ1KZ",
+          "B08L1XPVFD",
+          "B08ZS57R32",
+          "B096ZQXB5P",
+          "B08MSR1SJS"
+        ],
+        "61533": [
+          "B01MSTVEZN",
+          "B07QB8484Y",
+          "B07QB8484X",
+          "B01I5JVBZK",
+          "B085WY78SG",
+          "B07FNQ3DHK",
+          "B084BPS1LS",
+          "B00WGOY7O8",
+          "B07BXN33GQ",
+          "B079ZYKLFD"
+        ]
+      },
+      "bm25": {
+        "13357": [
+          "B093QP3335",
+          "B0937C9GTY",
+          "B06WV791ZY",
+          "B08DTXGJJW",
+          "B09BW133YW",
+          "B091BWS8VF",
+          "B01MV80F5C",
+          "B07DBQNP1X",
+          "B08L81WGD7",
+          "B099ZLJVVB"
+        ],
+        "18868": [
+          "B07H97VGBP",
+          "B08T9X4XT6",
+          "B079FTG3Z7",
+          "B07GN7XRQ9",
+          "B071RN7FHT",
+          "B0714N7942",
+          "B071P9Y9GD",
+          "B072FRGG6S",
+          "B06X9WSSLL",
+          "B07GJNCV8R"
+        ],
+        "28703": [
+          "B08GYFBKD4",
+          "B08SWF4FZ2",
+          "B08PFJVLGD",
+          "B08RZ19NDS",
+          "B08V54D9JP",
+          "B07TCMJQTF",
+          "B08FC69VMH",
+          "B083BM815K",
+          "B094Y28G6D",
+          "B08TX2KN7L"
+        ],
+        "31224": [
+          "B07HP6XKC6",
+          "B01MU31H1P",
+          "B006Q8VAL8",
+          "B07GVNHRRR",
+          "B01L8L7KO8",
+          "B07YY3ZWCP",
+          "B00W4Z82ZO",
+          "B07BDNLQWK",
+          "B00W46KQ5W",
+          "B000IHYS2Q"
+        ],
+        "33633": [
+          "B07Z8N7Z3K",
+          "B07NY97H69",
+          "B07HHX8TNL",
+          "B09CTGK5Q3",
+          "B09DD8J2K8",
+          "B0161N7XAO",
+          "B07JFNQ1H4",
+          "B07TFKMTJ8",
+          "B07XL9JR86",
+          "B07L42QXVL"
+        ],
+        "38249": [
+          "B09BHVMCC3",
+          "B09BQTS4FF",
+          "B00OXNEU5Q",
+          "B07F6QTVK4",
+          "B082PR44HT",
+          "B075CT3ZT8",
+          "B08HQJQRHT",
+          "B087QYF1WC",
+          "B07WLWYNF3",
+          "B0922JVG1Y"
+        ],
+        "43240": [
+          "B09CTXLHZS",
+          "B09BCW927H",
+          "B08GWN3GMX",
+          "B08PPFGGK3",
+          "B08G42DW2L",
+          "B08FT5QDWJ",
+          "B08ZS57R32",
+          "B096ZQXB5P",
+          "B08DKWQD8R",
+          "B08GY7NPYN"
+        ],
+        "61533": [
+          "B01MSTVEZN",
+          "B01I5JVBZK",
+          "B07QB8484X",
+          "B07QB8484Y",
+          "B00WGOY7O8",
+          "B079ZYKLFD",
+          "B085WY78SG",
+          "B07FNQ3DHK",
+          "B084BPS1LS",
+          "B0837V9T36"
+        ]
+      }
+    }
+  },
+  "completo": {
+    "n_docs": 15000,
+    "metricas": {
+      "tfidf": {
+        "precision_at_10": 0.4125,
+        "recall_at_10": 0.151,
+        "mrr_at_10": 0.75,
+        "ndcg_at_10": 0.4129
+      },
+      "bm25": {
+        "precision_at_10": 0.55,
+        "recall_at_10": 0.1841,
+        "mrr_at_10": 0.75,
+        "ndcg_at_10": 0.5088
+      }
+    },
+    "por_consulta": {
+      "tfidf": [
+        {
+          "query_id": "13357",
+          "precision@10": 0.7,
+          "recall@10": 0.2258,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.504
+        },
+        {
+          "query_id": "18868",
+          "precision@10": 0.2,
+          "recall@10": 0.2222,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.2929
+        },
+        {
+          "query_id": "28703",
+          "precision@10": 0.4,
+          "recall@10": 0.1026,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.4986
+        },
+        {
+          "query_id": "31224",
+          "precision@10": 0.1,
+          "recall@10": 0.0667,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.1737
+        },
+        {
+          "query_id": "33633",
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        },
+        {
+          "query_id": "38249",
+          "precision@10": 0.5,
+          "recall@10": 0.1429,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.4097
+        },
+        {
+          "query_id": "43240",
+          "precision@10": 0.4,
+          "recall@10": 0.1143,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.4243
+        },
+        {
+          "query_id": "61533",
+          "precision@10": 1.0,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 1.0
+        }
+      ],
+      "bm25": [
+        {
+          "query_id": "13357",
+          "precision@10": 0.8,
+          "recall@10": 0.2581,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.549
+        },
+        {
+          "query_id": "18868",
+          "precision@10": 0.1,
+          "recall@10": 0.1111,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.1617
+        },
+        {
+          "query_id": "28703",
+          "precision@10": 0.7,
+          "recall@10": 0.1795,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.7237
+        },
+        {
+          "query_id": "31224",
+          "precision@10": 0.2,
+          "recall@10": 0.1333,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.2566
+        },
+        {
+          "query_id": "33633",
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0233
+        },
+        {
+          "query_id": "38249",
+          "precision@10": 0.7,
+          "recall@10": 0.2,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.6865
+        },
+        {
+          "query_id": "43240",
+          "precision@10": 0.9,
+          "recall@10": 0.2571,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.6693
+        },
+        {
+          "query_id": "61533",
+          "precision@10": 1.0,
+          "recall@10": 0.3333,
+          "mrr@10": 1.0,
+          "ndcg@10": 1.0
+        }
+      ]
+    },
+    "rankings": {
+      "tfidf": {
+        "13357": [
+          "B093QP3335",
+          "B0937C9GTY",
+          "B06WV791ZY",
+          "B08DTXGJJW",
+          "B08L81WGD7",
+          "B099ZLJVVB",
+          "B01MV80F5C",
+          "B09BW133YW",
+          "B091BWS8VF",
+          "B0953QHV52"
+        ],
+        "18868": [
+          "B07H97VGBP",
+          "B07VQJFQBD",
+          "B07JZ62WYD",
+          "B07TV35NJF",
+          "B07X9RKKRH",
+          "B079FXFQ7C",
+          "B07GN7XRQ9",
+          "B07FTNS8CR",
+          "B071P9Y9GD",
+          "B072FRGG6S"
+        ],
+        "28703": [
+          "B08GYFBKD4",
+          "B08SWF4FZ2",
+          "B07TFFNPVQ",
+          "B01EFS64D4",
+          "B07Y2WFMXS",
+          "B08JP849SZ",
+          "B083BM815K",
+          "B08WSYMVYF",
+          "B08RZ19NDS",
+          "B014A8X7RU"
+        ],
+        "31224": [
+          "B07JLWWQZX",
+          "B07HP6XKC6",
+          "B0797RRZY2",
+          "B08948W298",
+          "B089M8K16G",
+          "B07KKMBLRP",
+          "B07FPFLGNL",
+          "B08629FFMX",
+          "B08629VH7M",
+          "B0862B3NK8"
+        ],
+        "33633": [
+          "B07VNQ8K8N",
+          "B07N1CHMF4",
+          "B07V9PK1ZP",
+          "B09DD8J2K8",
+          "B01MCSYC0G",
+          "B0753RX9VR",
+          "B09H42YXHC",
+          "B07HSRJRSQ",
+          "B00EM9ZVAY",
+          "B074MK4TV6"
+        ],
+        "38249": [
+          "B09BQTS4FF",
+          "B075CT3ZT8",
+          "B09874QBSH",
+          "B07F6QTVK4",
+          "B099J94HB7",
+          "B09BHVMCC3",
+          "B08Y8G4F6K",
+          "B08YYMHKSG",
+          "B00OXNEU5Q",
+          "B07XBXTVQ8"
+        ],
+        "43240": [
+          "B08DKWQD8R",
+          "B07DWTB3MT",
+          "B07KD8ZG55",
+          "B09CTXLHZS",
+          "B08PPFGGK3",
+          "B08KPYKNWZ",
+          "B07V8GBRPW",
+          "B086W1RM1L",
+          "B0728J223J",
+          "B07BW9F2LG"
+        ],
+        "61533": [
+          "B085WY78SG",
+          "B07FNQ3DHK",
+          "B01MSTVEZN",
+          "B07QB8484X",
+          "B07QB8484Y",
+          "B01I5JVBZK",
+          "B084BPS1LS",
+          "B01M31TMH8",
+          "B00WGOY7O8",
+          "B079ZYKLFD"
+        ]
+      },
+      "bm25": {
+        "13357": [
+          "B093QP3335",
+          "B0937C9GTY",
+          "B08DTXGJJW",
+          "B06WV791ZY",
+          "B09BW133YW",
+          "B01MV80F5C",
+          "B091BWS8VF",
+          "B08L81WGD7",
+          "B07DBQNP1X",
+          "B099ZLJVVB"
+        ],
+        "18868": [
+          "B07X9RKKRH",
+          "B07H97VGBP",
+          "B079Q8V9HG",
+          "B07VQJFQBD",
+          "B07FTNS8CR",
+          "B09HT19XR9",
+          "B07JZ62WYD",
+          "B08T9X4XT6",
+          "B079FXFQ7C",
+          "B079FTG3Z7"
+        ],
+        "28703": [
+          "B08GYFBKD4",
+          "B08SWF4FZ2",
+          "B08RZ19NDS",
+          "B08PFJVLGD",
+          "B07FK1M4KM",
+          "B08V54D9JP",
+          "B0829JLBC5",
+          "B08FC69VMH",
+          "B07TCMJQTF",
+          "B07KRT1Q62"
+        ],
+        "31224": [
+          "B07JLWWQZX",
+          "B07HP6XKC6",
+          "B09C23ZY58",
+          "B0797RRZY2",
+          "B00KT4MBT0",
+          "B07KKMBLRP",
+          "B07J4ZXQKB",
+          "B07XWXQ62J",
+          "B01MU31H1P",
+          "B08948W298"
+        ],
+        "33633": [
+          "B075VX8Y7Q",
+          "B09H42YXHC",
+          "B07TG2VB9F",
+          "B07WPJSVR1",
+          "B00EM9ZVAY",
+          "B0753RX9VR",
+          "B08JCX3CJP",
+          "B07JCK13L4",
+          "B0161N8LR8",
+          "B07Z8N7Z3K"
+        ],
+        "38249": [
+          "B09BHVMCC3",
+          "B09BQTS4FF",
+          "B07F6QTVK4",
+          "B00OXNEU5Q",
+          "B075CT3ZT8",
+          "B082PR44HT",
+          "B08HQJQRHT",
+          "B07WLWYNF3",
+          "B071X52JKQ",
+          "B0819M6VTF"
+        ],
+        "43240": [
+          "B09CTXLHZS",
+          "B09BCW927H",
+          "B08PPFGGK3",
+          "B08GWN3GMX",
+          "B08FT5QDWJ",
+          "B08G42DW2L",
+          "B08DKWQD8R",
+          "B08ZS57R32",
+          "B07DWTB3MT",
+          "B096ZQXB5P"
+        ],
+        "61533": [
+          "B01MSTVEZN",
+          "B01I5JVBZK",
+          "B07QB8484X",
+          "B07QB8484Y",
+          "B00WGOY7O8",
+          "B079ZYKLFD",
+          "B085WY78SG",
+          "B07FNQ3DHK",
+          "B084BPS1LS",
+          "B0837V9T36"
+        ]
+      }
+    },
+    "jaccard_ciegas": [
+      {
+        "intencion": "100455",
+        "jaccard_context_direct": 0.8182,
+        "jaccard_context_semantic": 0.0526,
+        "jaccard_direct_semantic": 0.0526,
+        "baseline": "tfidf"
+      },
+      {
+        "intencion": "101352",
+        "jaccard_context_direct": 0.0526,
+        "jaccard_context_semantic": 0.0,
+        "jaccard_direct_semantic": 0.0,
+        "baseline": "tfidf"
+      },
+      {
+        "intencion": "93437",
+        "jaccard_context_direct": 0.0,
+        "jaccard_context_semantic": 0.25,
+        "jaccard_direct_semantic": 0.0,
+        "baseline": "tfidf"
+      },
+      {
+        "intencion": "96202",
+        "jaccard_context_direct": 0.6667,
+        "jaccard_context_semantic": 0.5385,
+        "jaccard_direct_semantic": 0.5385,
+        "baseline": "tfidf"
+      },
+      {
+        "intencion": "100455",
+        "jaccard_context_direct": 0.25,
+        "jaccard_context_semantic": 0.0,
+        "jaccard_direct_semantic": 0.0,
+        "baseline": "bm25"
+      },
+      {
+        "intencion": "101352",
+        "jaccard_context_direct": 0.0526,
+        "jaccard_context_semantic": 0.0,
+        "jaccard_direct_semantic": 0.0,
+        "baseline": "bm25"
+      },
+      {
+        "intencion": "93437",
+        "jaccard_context_direct": 0.0,
+        "jaccard_context_semantic": 0.25,
+        "jaccard_direct_semantic": 0.0,
+        "baseline": "bm25"
+      },
+      {
+        "intencion": "96202",
+        "jaccard_context_direct": 0.3333,
+        "jaccard_context_semantic": 0.6667,
+        "jaccard_direct_semantic": 0.3333,
+        "baseline": "bm25"
+      }
+    ]
+  }
+}

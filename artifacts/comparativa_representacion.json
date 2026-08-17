@@ -1,0 +1,1255 @@
+{
+  "configuracion": {
+    "corpus": "catalogo_muestra",
+    "n_docs": 1500,
+    "modelo_congelado": {
+      "id": "gemini-embedding-2",
+      "contrato": "sin_contrato",
+      "dim": 768,
+      "metrica": "cosine"
+    },
+    "top_k": 10,
+    "r01": {
+      "metrica": "ndcg_at_10",
+      "tolerancia": 0.01,
+      "coste": "chars_media",
+      "decidida_sobre": "catalogo_productos",
+      "ganadora": "A4"
+    },
+    "d07_chunking": false
+  },
+  "plantillas": [
+    {
+      "plantilla": "A0",
+      "n_docs": 1500,
+      "chars_media": 1308.9,
+      "chars_p50": 1083,
+      "chars_p90": 2999,
+      "chars_max": 3000,
+      "n_vacios": 0,
+      "pct_vs_A0": 100.0
+    },
+    {
+      "plantilla": "A1",
+      "n_docs": 1500,
+      "chars_media": 122.9,
+      "chars_p50": 126,
+      "chars_p90": 193,
+      "chars_max": 225,
+      "n_vacios": 0,
+      "pct_vs_A0": 9.4
+    },
+    {
+      "plantilla": "A2",
+      "n_docs": 1500,
+      "chars_media": 138.2,
+      "chars_p50": 144,
+      "chars_p90": 206,
+      "chars_max": 270,
+      "n_vacios": 0,
+      "pct_vs_A0": 10.6
+    },
+    {
+      "plantilla": "A3",
+      "n_docs": 1500,
+      "chars_media": 151.0,
+      "chars_p50": 157,
+      "chars_p90": 219,
+      "chars_max": 286,
+      "n_vacios": 0,
+      "pct_vs_A0": 11.5
+    },
+    {
+      "plantilla": "A3n",
+      "n_docs": 1500,
+      "chars_media": 158.9,
+      "chars_p50": 162,
+      "chars_p90": 227,
+      "chars_max": 286,
+      "n_vacios": 0,
+      "pct_vs_A0": 12.1
+    },
+    {
+      "plantilla": "A4",
+      "n_docs": 1500,
+      "chars_media": 760.4,
+      "chars_p50": 1065,
+      "chars_p90": 1081,
+      "chars_max": 1082,
+      "n_vacios": 0,
+      "pct_vs_A0": 58.1
+    },
+    {
+      "plantilla": "A5",
+      "n_docs": 1500,
+      "chars_media": 139.7,
+      "chars_p50": 143,
+      "chars_p90": 209,
+      "chars_max": 242,
+      "n_vacios": 0,
+      "pct_vs_A0": 10.7
+    }
+  ],
+  "errores_de_codificacion": {},
+  "costes_de_codificacion": [
+    {
+      "plantilla": "A0",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 47.12,
+      "textos_por_segundo": 31.83,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A1",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 46.17,
+      "textos_por_segundo": 32.49,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A2",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 44.64,
+      "textos_por_segundo": 33.6,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A3",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 45.58,
+      "textos_por_segundo": 32.91,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A3n",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 42.0,
+      "textos_por_segundo": 35.71,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A4",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 45.98,
+      "textos_por_segundo": 32.62,
+      "desde_cache": true
+    },
+    {
+      "plantilla": "A5",
+      "modelo": "gemini-embedding-2",
+      "tipo": "document",
+      "contrato": "sin_contrato",
+      "n_textos": 1500,
+      "dim": 3072,
+      "segundos": 42.09,
+      "textos_por_segundo": 35.64,
+      "desde_cache": true
+    }
+  ],
+  "barrido": [
+    {
+      "plantilla": "A3n",
+      "precision_at_10": 0.8375,
+      "recall_at_10": 0.4612,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7945,
+      "chars_media": 158.9,
+      "pct_vs_A0": 12.1,
+      "segundos": 42.0
+    },
+    {
+      "plantilla": "A3",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4544,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7757,
+      "chars_media": 151.0,
+      "pct_vs_A0": 11.5,
+      "segundos": 45.58
+    },
+    {
+      "plantilla": "A0",
+      "precision_at_10": 0.7875,
+      "recall_at_10": 0.4155,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7718,
+      "chars_media": 1308.9,
+      "pct_vs_A0": 100.0,
+      "segundos": 47.12
+    },
+    {
+      "plantilla": "A1",
+      "precision_at_10": 0.7875,
+      "recall_at_10": 0.4424,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7691,
+      "chars_media": 122.9,
+      "pct_vs_A0": 9.4,
+      "segundos": 46.17
+    },
+    {
+      "plantilla": "A4",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4334,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7687,
+      "chars_media": 760.4,
+      "pct_vs_A0": 58.1,
+      "segundos": 45.98
+    },
+    {
+      "plantilla": "A2",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4137,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7614,
+      "chars_media": 138.2,
+      "pct_vs_A0": 10.6,
+      "segundos": 44.64
+    },
+    {
+      "plantilla": "A5",
+      "precision_at_10": 0.775,
+      "recall_at_10": 0.4009,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.744,
+      "chars_media": 139.7,
+      "pct_vs_A0": 10.7,
+      "segundos": 42.09
+    }
+  ],
+  "regla_r01": [
+    {
+      "plantilla": "A1",
+      "precision_at_10": 0.7875,
+      "recall_at_10": 0.4424,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7691,
+      "chars_media": 122.9,
+      "pct_vs_A0": 9.4,
+      "segundos": 46.17,
+      "admisible": true,
+      "posicion_regla": 1
+    },
+    {
+      "plantilla": "A3",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4544,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7757,
+      "chars_media": 151.0,
+      "pct_vs_A0": 11.5,
+      "segundos": 45.58,
+      "admisible": true,
+      "posicion_regla": 2
+    },
+    {
+      "plantilla": "A4",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4334,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7687,
+      "chars_media": 760.4,
+      "pct_vs_A0": 58.1,
+      "segundos": 45.98,
+      "admisible": true,
+      "posicion_regla": 3
+    },
+    {
+      "plantilla": "A0",
+      "precision_at_10": 0.7875,
+      "recall_at_10": 0.4155,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7718,
+      "chars_media": 1308.9,
+      "pct_vs_A0": 100.0,
+      "segundos": 47.12,
+      "admisible": true,
+      "posicion_regla": 4
+    },
+    {
+      "plantilla": "A2",
+      "precision_at_10": 0.8125,
+      "recall_at_10": 0.4137,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.7614,
+      "chars_media": 138.2,
+      "pct_vs_A0": 10.6,
+      "segundos": 44.64,
+      "admisible": false,
+      "posicion_regla": 5
+    },
+    {
+      "plantilla": "A5",
+      "precision_at_10": 0.775,
+      "recall_at_10": 0.4009,
+      "mrr_at_10": 1.0,
+      "ndcg_at_10": 0.744,
+      "chars_media": 139.7,
+      "pct_vs_A0": 10.7,
+      "segundos": 42.09,
+      "admisible": false,
+      "posicion_regla": 6
+    }
+  ],
+  "consistencia_ciegas": [
+    {
+      "plantilla": "A2",
+      "jaccard_context_direct": 0.5684,
+      "jaccard_context_semantic": 0.5989,
+      "jaccard_direct_semantic": 0.4597,
+      "jaccard_medio": 0.5423
+    },
+    {
+      "plantilla": "A5",
+      "jaccard_context_direct": 0.5617,
+      "jaccard_context_semantic": 0.5809,
+      "jaccard_direct_semantic": 0.4471,
+      "jaccard_medio": 0.5299
+    },
+    {
+      "plantilla": "A3n",
+      "jaccard_context_direct": 0.4904,
+      "jaccard_context_semantic": 0.5855,
+      "jaccard_direct_semantic": 0.503,
+      "jaccard_medio": 0.5263
+    },
+    {
+      "plantilla": "A1",
+      "jaccard_context_direct": 0.5121,
+      "jaccard_context_semantic": 0.5571,
+      "jaccard_direct_semantic": 0.4664,
+      "jaccard_medio": 0.5119
+    },
+    {
+      "plantilla": "A4",
+      "jaccard_context_direct": 0.4987,
+      "jaccard_context_semantic": 0.511,
+      "jaccard_direct_semantic": 0.4151,
+      "jaccard_medio": 0.4749
+    },
+    {
+      "plantilla": "A3",
+      "jaccard_context_direct": 0.5296,
+      "jaccard_context_semantic": 0.4561,
+      "jaccard_direct_semantic": 0.4196,
+      "jaccard_medio": 0.4685
+    },
+    {
+      "plantilla": "A0",
+      "jaccard_context_direct": 0.4792,
+      "jaccard_context_semantic": 0.4114,
+      "jaccard_direct_semantic": 0.375,
+      "jaccard_medio": 0.4219
+    }
+  ],
+  "barrido_completo": [
+    {
+      "plantilla": "A4",
+      "precision_at_10": 0.625,
+      "recall_at_10": 0.2905,
+      "mrr_at_10": 0.9375,
+      "ndcg_at_10": 0.6006,
+      "chars_media": 654.3,
+      "ndcg_muestra": 0.7687,
+      "caida_al_escalar": -0.1681
+    },
+    {
+      "plantilla": "A0",
+      "precision_at_10": 0.625,
+      "recall_at_10": 0.2632,
+      "mrr_at_10": 0.8438,
+      "ndcg_at_10": 0.5894,
+      "chars_media": 1211.9,
+      "ndcg_muestra": 0.7718,
+      "caida_al_escalar": -0.1824
+    },
+    {
+      "plantilla": "A1",
+      "precision_at_10": 0.6,
+      "recall_at_10": 0.2836,
+      "mrr_at_10": 0.9,
+      "ndcg_at_10": 0.5681,
+      "chars_media": 115.4,
+      "ndcg_muestra": 0.7691,
+      "caida_al_escalar": -0.201
+    },
+    {
+      "plantilla": "A3",
+      "precision_at_10": 0.6,
+      "recall_at_10": 0.2565,
+      "mrr_at_10": 0.8875,
+      "ndcg_at_10": 0.5668,
+      "chars_media": 143.9,
+      "ndcg_muestra": 0.7757,
+      "caida_al_escalar": -0.2089
+    },
+    {
+      "plantilla": "A3n",
+      "precision_at_10": 0.5875,
+      "recall_at_10": 0.2253,
+      "mrr_at_10": 0.875,
+      "ndcg_at_10": 0.5589,
+      "chars_media": 152.2,
+      "ndcg_muestra": 0.7945,
+      "caida_al_escalar": -0.2356
+    },
+    {
+      "plantilla": "A2",
+      "precision_at_10": 0.575,
+      "recall_at_10": 0.243,
+      "mrr_at_10": 0.8333,
+      "ndcg_at_10": 0.5499,
+      "chars_media": 131.2,
+      "ndcg_muestra": 0.7614,
+      "caida_al_escalar": -0.2115
+    },
+    {
+      "plantilla": "A5",
+      "precision_at_10": 0.575,
+      "recall_at_10": 0.2119,
+      "mrr_at_10": 0.875,
+      "ndcg_at_10": 0.5493,
+      "chars_media": 132.1,
+      "ndcg_muestra": 0.744,
+      "caida_al_escalar": -0.1947
+    }
+  ],
+  "regla_r01_completo": [
+    {
+      "plantilla": "A4",
+      "precision_at_10": 0.625,
+      "recall_at_10": 0.2905,
+      "mrr_at_10": 0.9375,
+      "ndcg_at_10": 0.6006,
+      "chars_media": 654.3,
+      "ndcg_muestra": 0.7687,
+      "caida_al_escalar": -0.1681,
+      "admisible": true,
+      "posicion_regla": 1
+    },
+    {
+      "plantilla": "A1",
+      "precision_at_10": 0.6,
+      "recall_at_10": 0.2836,
+      "mrr_at_10": 0.9,
+      "ndcg_at_10": 0.5681,
+      "chars_media": 115.4,
+      "ndcg_muestra": 0.7691,
+      "caida_al_escalar": -0.201,
+      "admisible": false,
+      "posicion_regla": 2
+    },
+    {
+      "plantilla": "A2",
+      "precision_at_10": 0.575,
+      "recall_at_10": 0.243,
+      "mrr_at_10": 0.8333,
+      "ndcg_at_10": 0.5499,
+      "chars_media": 131.2,
+      "ndcg_muestra": 0.7614,
+      "caida_al_escalar": -0.2115,
+      "admisible": false,
+      "posicion_regla": 3
+    },
+    {
+      "plantilla": "A5",
+      "precision_at_10": 0.575,
+      "recall_at_10": 0.2119,
+      "mrr_at_10": 0.875,
+      "ndcg_at_10": 0.5493,
+      "chars_media": 132.1,
+      "ndcg_muestra": 0.744,
+      "caida_al_escalar": -0.1947,
+      "admisible": false,
+      "posicion_regla": 4
+    },
+    {
+      "plantilla": "A3",
+      "precision_at_10": 0.6,
+      "recall_at_10": 0.2565,
+      "mrr_at_10": 0.8875,
+      "ndcg_at_10": 0.5668,
+      "chars_media": 143.9,
+      "ndcg_muestra": 0.7757,
+      "caida_al_escalar": -0.2089,
+      "admisible": false,
+      "posicion_regla": 5
+    },
+    {
+      "plantilla": "A0",
+      "precision_at_10": 0.625,
+      "recall_at_10": 0.2632,
+      "mrr_at_10": 0.8438,
+      "ndcg_at_10": 0.5894,
+      "chars_media": 1211.9,
+      "ndcg_muestra": 0.7718,
+      "caida_al_escalar": -0.1824,
+      "admisible": false,
+      "posicion_regla": 6
+    }
+  ],
+  "consistencia_ciegas_completo": [
+    {
+      "plantilla": "A5",
+      "jaccard_completo": 0.552,
+      "jaccard_muestra": 0.5299,
+      "ndcg_at_10": 0.5493,
+      "gana_r01": false
+    },
+    {
+      "plantilla": "A2",
+      "jaccard_completo": 0.526,
+      "jaccard_muestra": 0.5423,
+      "ndcg_at_10": 0.5499,
+      "gana_r01": false
+    },
+    {
+      "plantilla": "A1",
+      "jaccard_completo": 0.5237,
+      "jaccard_muestra": 0.5119,
+      "ndcg_at_10": 0.5681,
+      "gana_r01": false
+    },
+    {
+      "plantilla": "A3n",
+      "jaccard_completo": 0.4965,
+      "jaccard_muestra": 0.5263,
+      "ndcg_at_10": 0.5589,
+      "gana_r01": false
+    },
+    {
+      "plantilla": "A3",
+      "jaccard_completo": 0.4543,
+      "jaccard_muestra": 0.4685,
+      "ndcg_at_10": 0.5668,
+      "gana_r01": false
+    },
+    {
+      "plantilla": "A4",
+      "jaccard_completo": 0.3747,
+      "jaccard_muestra": 0.4749,
+      "ndcg_at_10": 0.6006,
+      "gana_r01": true
+    },
+    {
+      "plantilla": "A0",
+      "jaccard_completo": 0.3727,
+      "jaccard_muestra": 0.4219,
+      "ndcg_at_10": 0.5894,
+      "gana_r01": false
+    }
+  ],
+  "rankings": {
+    "A0": {
+      "13357": [
+        "B09BW133YW",
+        "B01MV80F5C",
+        "B015FMZ4MQ",
+        "B07DBQNP1X",
+        "B091BWS8VF",
+        "B096W9CNHN",
+        "B08JM5M345",
+        "B07S946NHS",
+        "B00YMT0IKW",
+        "B07BFFKCHC"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GN7XRQ9",
+        "B08T9X4XT6",
+        "B07GJNCV8R",
+        "B07GQS1C7W",
+        "B07G4376VK",
+        "B001EYTW7S",
+        "B07G434RZM",
+        "B09BF2XMD5"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B08PFJXSW5",
+        "B08PFK1TTF",
+        "B08MCDPVCJ",
+        "B089YT2VDN",
+        "B07XT5ZSJD",
+        "B0883BHSY5",
+        "B08BZ58J1D",
+        "B08CS7D3RL",
+        "B08RZ19NDS"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01B98IYPY",
+        "B00BIFWNV0",
+        "B006Q8VAL8",
+        "B00W46KQ5W",
+        "B00FWVM4RE",
+        "B01MU31H1P",
+        "B07XZBXCNB",
+        "B01C672SZ4",
+        "B000IHYS2Q"
+      ],
+      "33633": [
+        "B07TFKMTJ8",
+        "B07GDQ9333",
+        "B07XM84G9L",
+        "B07Z8N7Z3K",
+        "B07XD9D2HB",
+        "B07M9C56KQ",
+        "B07GSVQG2R",
+        "B07HHX8TNL",
+        "B0818TKB98",
+        "B09CTGK5Q3"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B08HQJQRHT",
+        "B08S3WZX4M",
+        "B08FMH2YHQ",
+        "B08CDNV942",
+        "B08Z3LRJ8B",
+        "B087Q5SLQT",
+        "B08Y8G4F6K",
+        "B087QYF1WC",
+        "B09269KNMH"
+      ],
+      "43240": [
+        "B08MJBJWLP",
+        "B092VN3C4H",
+        "B08N6MJYNM",
+        "B08FT5QDWJ",
+        "B08G42DW2L",
+        "B08LVQPZQD",
+        "B08M3YK354",
+        "B08JCFN672",
+        "B08PPFGGK3",
+        "B08LYZLJ35"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B081T55SQF",
+        "B073FB37SL",
+        "B07FNQ3DHK",
+        "B00M7DTS88",
+        "B009PLRV2A",
+        "B082VVLV3X",
+        "B00WGOY7O8",
+        "B0811WMJM7",
+        "B07QB8484Y"
+      ]
+    },
+    "A1": {
+      "13357": [
+        "B09BW133YW",
+        "B00YMT0IKW",
+        "B07DBQNP1X",
+        "B015FMZ4MQ",
+        "B01MV80F5C",
+        "B07S946NHS",
+        "B091BB18QV",
+        "B00T9Y8TQA",
+        "B091BWS8VF",
+        "B08QN9NH1F"
+      ],
+      "18868": [
+        "B07H2Y8R6Y",
+        "B07H97VGBP",
+        "B07GJNCV8R",
+        "B07GN7XRQ9",
+        "B07CVB7W8W",
+        "B06X9WSSLL",
+        "B08T9X4XT6",
+        "B09BF2XMD5",
+        "B07G1DXKV2",
+        "B0714N7942"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B07XT5ZSJD",
+        "B0814BMHD1",
+        "B089YT2VDN",
+        "B08GYFBKD4",
+        "B083BM815K",
+        "B08MCDPVCJ",
+        "B087KFR855",
+        "B08M3LJX5H",
+        "B08DTFBJ9D"
+      ],
+      "31224": [
+        "B01B98IYPY",
+        "B07HP6XKC6",
+        "B01MU31H1P",
+        "B00BIFWNV0",
+        "B012T29V06",
+        "B00FWVM4RE",
+        "B01C672SZ4",
+        "B08WQ69RYX",
+        "B01LNNBP9W",
+        "B07YY3ZWCP"
+      ],
+      "33633": [
+        "B07XD9D2HB",
+        "B07TFKMTJ8",
+        "B07NY97H69",
+        "B07Z8N7Z3K",
+        "B07HHX8TNL",
+        "B07GDQ9333",
+        "B07XM84G9L",
+        "B07GSVQG2R",
+        "B07Y8D63G9",
+        "B0818TKB98"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B094FWB6J5",
+        "B08Y8G4F6K",
+        "B087QYF1WC",
+        "B08CDNV942",
+        "B08S3WZX4M",
+        "B07SWYRYB4",
+        "B07QKJQ6Z4",
+        "B07WLWYNF3",
+        "B08FMH2YHQ"
+      ],
+      "43240": [
+        "B08FT5QDWJ",
+        "B08DXHWQZC",
+        "B08L6GSP7S",
+        "B08LVQPZQD",
+        "B08JCFN672",
+        "B09CTXLHZS",
+        "B08N6MJYNM",
+        "B09BCW927H",
+        "B08M3YK354",
+        "B093NZZZXD"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B079ZYKLFD",
+        "B0811WMJM7",
+        "B00WGOY7O8",
+        "B0046ZFHO4",
+        "B0837V9T36",
+        "B07BXN33GQ",
+        "B01MSTVEZN",
+        "B073FB37SL",
+        "B01I5JVBZK"
+      ]
+    },
+    "A2": {
+      "13357": [
+        "B01MV80F5C",
+        "B09BW133YW",
+        "B015FMZ4MQ",
+        "B07S946NHS",
+        "B00TGZPG6S",
+        "B07DBQNP1X",
+        "B08JM5M345",
+        "B0937C9GTY",
+        "B08QN9NH1F",
+        "B07BFFKCHC"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GJNCV8R",
+        "B07GN7XRQ9",
+        "B07Y8D63G9",
+        "B0714N7942",
+        "B06X9WSSLL",
+        "B07CVB7W8W",
+        "B07G1DXKV2",
+        "B071RN7FHT"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B0814BMHD1",
+        "B08MCDPVCJ",
+        "B089YT2VDN",
+        "B08GYFBKD4",
+        "B08PFJXSW5",
+        "B08CS7D3RL",
+        "B08BZ58J1D",
+        "B08M3LJX5H",
+        "B0883BHSY5"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01B98IYPY",
+        "B01MU31H1P",
+        "B012T29V06",
+        "B00W46KQ5W",
+        "B00BIFWNV0",
+        "B00FWVM4RE",
+        "B000IHYS2Q",
+        "B01LNNBP9W",
+        "B01C672SZ4"
+      ],
+      "33633": [
+        "B07TFKMTJ8",
+        "B07GDQ9333",
+        "B07NY97H69",
+        "B07Z8N7Z3K",
+        "B07XD9D2HB",
+        "B07Y8D63G9",
+        "B01GEHFGPQ",
+        "B07L42QXVL",
+        "B003PALW1I",
+        "B01HPZV5NS"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B094FWB6J5",
+        "B08S3WZX4M",
+        "B08FMH2YHQ",
+        "B07SWYRYB4",
+        "B087QYF1WC",
+        "B08CDNV942",
+        "B087Q5SLQT",
+        "B07WLWYNF3",
+        "B07QKJQ6Z4"
+      ],
+      "43240": [
+        "B08JCFN672",
+        "B08FT5QDWJ",
+        "B08L6GSP7S",
+        "B08N6MJYNM",
+        "B08DKWQD8R",
+        "B09BCW927H",
+        "B09CTXLHZS",
+        "B08Q3KQ1KZ",
+        "B08M3YK354",
+        "B08DXHWQZC"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B079ZYKLFD",
+        "B01MSTVEZN",
+        "B0811WMJM7",
+        "B073FB37SL",
+        "B01I5JVBZK",
+        "B00WGOY7O8",
+        "B07FNQ3DHK",
+        "B082VVLV3X",
+        "B07QB8484Y"
+      ]
+    },
+    "A3": {
+      "13357": [
+        "B01MV80F5C",
+        "B09BW133YW",
+        "B015FMZ4MQ",
+        "B07S946NHS",
+        "B08JM5M345",
+        "B00YMT0IKW",
+        "B00T9Y8TQA",
+        "B00TGZPG6S",
+        "B0937C9GTY",
+        "B00YMSZDZS"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GN7XRQ9",
+        "B07GJNCV8R",
+        "B07CVB7W8W",
+        "B001EYTW7S",
+        "B06X9WSSLL",
+        "B07Y8D63G9",
+        "B0714N7942",
+        "B071RN7FHT"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B08MCDPVCJ",
+        "B08PFK1TTF",
+        "B089YT2VDN",
+        "B08CS7D3RL",
+        "B08BZ58J1D",
+        "B08GYFBKD4",
+        "B08M3LJX5H",
+        "B0814BMHD1",
+        "B08PFJXSW5"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01B98IYPY",
+        "B00BIFWNV0",
+        "B01MU31H1P",
+        "B01LNNBP9W",
+        "B006Q8VAL8",
+        "B00W46KQ5W",
+        "B01C672SZ4",
+        "B00FWVM4RE",
+        "B07XZBXCNB"
+      ],
+      "33633": [
+        "B07TFKMTJ8",
+        "B07Z8N7Z3K",
+        "B0818K237B",
+        "B07GDQ9333",
+        "B0818TKB98",
+        "B07XD9D2HB",
+        "B07HHX8TNL",
+        "B07XM84G9L",
+        "B0818VQ544",
+        "B07GSVQG2R"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B08CDNV942",
+        "B08FMH2YHQ",
+        "B07WLWYNF3",
+        "B087Q5SLQT",
+        "B08S3WZX4M",
+        "B07SWYRYB4",
+        "B087QYF1WC",
+        "B08Y8G4F6K",
+        "B08N9V8J2C"
+      ],
+      "43240": [
+        "B08JCFN672",
+        "B08FT5QDWJ",
+        "B08N6MJYNM",
+        "B08L6GSP7S",
+        "B09BCW927H",
+        "B08DXHWQZC",
+        "B08DKWQD8R",
+        "B08M3YK354",
+        "B08LVQPZQD",
+        "B08Q3KQ1KZ"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B0811WMJM7",
+        "B00WGOY7O8",
+        "B081T55SQF",
+        "B01I5JVBZK",
+        "B009PLRV2A",
+        "B00M7DTS88",
+        "B07QB8484Y",
+        "B0837V9T36",
+        "B07FNQ3DHK"
+      ]
+    },
+    "A3n": {
+      "13357": [
+        "B01MV80F5C",
+        "B09BW133YW",
+        "B015FMZ4MQ",
+        "B07S946NHS",
+        "B08JM5M345",
+        "B00YMT0IKW",
+        "B091BB18QV",
+        "B00T9Y8TQA",
+        "B00TGZPG6S",
+        "B0937C9GTY"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GN7XRQ9",
+        "B07GJNCV8R",
+        "B07CVB7W8W",
+        "B001EYTW7S",
+        "B06X9WSSLL",
+        "B07Y8D63G9",
+        "B0714N7942",
+        "B071RN7FHT"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B08MCDPVCJ",
+        "B08PFK1TTF",
+        "B089YT2VDN",
+        "B08CS7D3RL",
+        "B08BZ58J1D",
+        "B08M3LJX5H",
+        "B08GYFBKD4",
+        "B08PFJXSW5",
+        "B0883BHSY5"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01B98IYPY",
+        "B00BIFWNV0",
+        "B01MU31H1P",
+        "B01LNNBP9W",
+        "B006Q8VAL8",
+        "B00W46KQ5W",
+        "B01C672SZ4",
+        "B00FWVM4RE",
+        "B07XZBXCNB"
+      ],
+      "33633": [
+        "B07TFKMTJ8",
+        "B07Z8N7Z3K",
+        "B0818K237B",
+        "B0818TKB98",
+        "B07XD9D2HB",
+        "B07HHX8TNL",
+        "B07XM84G9L",
+        "B0818VQ544",
+        "B07GDQ9333",
+        "B07GSVQG2R"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B08CDNV942",
+        "B07WLWYNF3",
+        "B08FMH2YHQ",
+        "B087Q5SLQT",
+        "B08S3WZX4M",
+        "B07SWYRYB4",
+        "B094FWB6J5",
+        "B087QYF1WC",
+        "B08Y8G4F6K"
+      ],
+      "43240": [
+        "B08JCFN672",
+        "B08FT5QDWJ",
+        "B08N6MJYNM",
+        "B08L6GSP7S",
+        "B08DKWQD8R",
+        "B09BCW927H",
+        "B08DXHWQZC",
+        "B08M3YK354",
+        "B08LVQPZQD",
+        "B08Q3KQ1KZ"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B0811WMJM7",
+        "B009PLRV2A",
+        "B07FNQ3DHK",
+        "B081T55SQF",
+        "B01I5JVBZK",
+        "B00M7DTS88",
+        "B00WGOY7O8",
+        "B07QB8484Y",
+        "B073FB37SL"
+      ]
+    },
+    "A4": {
+      "13357": [
+        "B01MV80F5C",
+        "B015FMZ4MQ",
+        "B07S946NHS",
+        "B09BW133YW",
+        "B096W9CNHN",
+        "B00YMT0IKW",
+        "B00YMSZDZS",
+        "B07BFFKCHC",
+        "B08JM5M345",
+        "B096ZLG8GF"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GN7XRQ9",
+        "B07GJNCV8R",
+        "B001EYTW7S",
+        "B08T9X4XT6",
+        "B07G434RZM",
+        "B07G4376VK",
+        "B06X9WSSLL",
+        "B076LXCCXR"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B08PFJXSW5",
+        "B08PFK1TTF",
+        "B08MCDPVCJ",
+        "B089YT2VDN",
+        "B0883BHSY5",
+        "B08BZ58J1D",
+        "B08GYFBKD4",
+        "B08CS7D3RL",
+        "B08M3LJX5H"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01B98IYPY",
+        "B00BIFWNV0",
+        "B006Q8VAL8",
+        "B00W46KQ5W",
+        "B00FWVM4RE",
+        "B01MU31H1P",
+        "B07XZBXCNB",
+        "B01C672SZ4",
+        "B000IHYS2Q"
+      ],
+      "33633": [
+        "B07TFKMTJ8",
+        "B07GDQ9333",
+        "B07XD9D2HB",
+        "B07XM84G9L",
+        "B0818TKB98",
+        "B07Z8N7Z3K",
+        "B0818K237B",
+        "B07M9C56KQ",
+        "B0818VQ544",
+        "B07GSVQG2R"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B08FMH2YHQ",
+        "B08HQJQRHT",
+        "B08S3WZX4M",
+        "B087QYF1WC",
+        "B087Q5SLQT",
+        "B08CDNV942",
+        "B08Y8G4F6K",
+        "B07SWYRYB4",
+        "B07WT1ZWG3"
+      ],
+      "43240": [
+        "B08JCFN672",
+        "B08DKWQD8R",
+        "B08G42DW2L",
+        "B08N6MJYNM",
+        "B08FT5QDWJ",
+        "B09CTXLHZS",
+        "B08M3YK354",
+        "B08Q3KQ1KZ",
+        "B092VN3C4H",
+        "B09BCW927H"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B073FB37SL",
+        "B081T55SQF",
+        "B07FNQ3DHK",
+        "B00M7DTS88",
+        "B009PLRV2A",
+        "B082VVLV3X",
+        "B00WGOY7O8",
+        "B0811WMJM7",
+        "B07QB8484Y"
+      ]
+    },
+    "A5": {
+      "13357": [
+        "B09BW133YW",
+        "B01MV80F5C",
+        "B015FMZ4MQ",
+        "B00YMT0IKW",
+        "B07S946NHS",
+        "B00T9Y8TQA",
+        "B07BFFKCHC",
+        "B00YMSZDZS",
+        "B08JM5M345",
+        "B00TGZPG6S"
+      ],
+      "18868": [
+        "B07H97VGBP",
+        "B07H2Y8R6Y",
+        "B07GJNCV8R",
+        "B07GN7XRQ9",
+        "B08T9X4XT6",
+        "B07CVB7W8W",
+        "B09BF2XMD5",
+        "B06X9WSSLL",
+        "B001EYTW7S",
+        "B0714N7942"
+      ],
+      "28703": [
+        "B07TCMJQTF",
+        "B08MCDPVCJ",
+        "B08CS7D3RL",
+        "B089YT2VDN",
+        "B08PFK1TTF",
+        "B08BZ58J1D",
+        "B08PFJXSW5",
+        "B08GYFBKD4",
+        "B0814BMHD1",
+        "B08M3LJX5H"
+      ],
+      "31224": [
+        "B07HP6XKC6",
+        "B01MU31H1P",
+        "B01B98IYPY",
+        "B00BIFWNV0",
+        "B00W46KQ5W",
+        "B01C672SZ4",
+        "B01NADH8A4",
+        "B006Q8VAL8",
+        "B00FWVM4RE",
+        "B01ARPWNDO"
+      ],
+      "33633": [
+        "B07XD9D2HB",
+        "B0818TKB98",
+        "B07GDQ9333",
+        "B0818K237B",
+        "B07TFKMTJ8",
+        "B07HHX8TNL",
+        "B07Z8N7Z3K",
+        "B07NY97H69",
+        "B0818VQ544",
+        "B07GSVQG2R"
+      ],
+      "38249": [
+        "B09BHVMCC3",
+        "B087QYF1WC",
+        "B08CDNV942",
+        "B08S3WZX4M",
+        "B087Q5SLQT",
+        "B08Y8G4F6K",
+        "B08FMH2YHQ",
+        "B07WLWYNF3",
+        "B08N9V8J2C",
+        "B07SWYRYB4"
+      ],
+      "43240": [
+        "B09CTXLHZS",
+        "B09BCW927H",
+        "B08N6MJYNM",
+        "B08JCFN672",
+        "B08J9T11XW",
+        "B08DXHWQZC",
+        "B08FT5QDWJ",
+        "B08M3YK354",
+        "B092VN3C4H",
+        "B08LVQPZQD"
+      ],
+      "61533": [
+        "B01M31TMH8",
+        "B0811WMJM7",
+        "B00WGOY7O8",
+        "B081T55SQF",
+        "B01I5JVBZK",
+        "B009PLRV2A",
+        "B00M7DTS88",
+        "B07QB8484Y",
+        "B0837V9T36",
+        "B07FNQ3DHK"
+      ]
+    }
+  }
+}

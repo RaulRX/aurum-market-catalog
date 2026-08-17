@@ -1,14 +1,32 @@
-# Documentation
+# Documentación de trabajo: plan, memorias de sesión y enunciado.
+# Es material interno, no forma parte de la entrega.
 docs/**
 
-# Data
+# Datos: los entrega el enunciado, no el repositorio
 data/**
 
-# Jupyter Notebook
+# Vectores codificados: caché regenerable, ~1,7 GB. Los .json y .md que cuelgan
+# directamente de artifacts/ SÍ se versionan — son los artefactos que exige cada
+# notebook (baseline_lexico, comparativa_modelos, comparativa_representacion).
+artifacts/embeddings/
+
+# Material de estudio de las sesiones del máster: se consulta como referencia,
+# pero ninguna función se importa desde ahí — lo que se reutiliza se copia y se
+# adapta dentro de src/aurum/.
+notebooks/sesiones/**
+src/vector_index_session/
+src/vector_search_session/
+
+# Jupyter
 .ipynb_checkpoints
 
-# Environments
+# Entornos y secretos
 .env
 .venv
 env/
 venv/
+
+# Cachés de herramientas (pytest, bytecode) — no son estructura del proyecto
+__pycache__/
+**/__pycache__/
+.pytest_cache/
