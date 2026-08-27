@@ -1,0 +1,9 @@
+docker stats --no-stream
+CONTAINER ID   NAME                    CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O        PIDS
+07ff03093cff   aurum-market-weaviate   0.57%     50.87MiB / 2GiB     2.48%     10.4MB / 84.5kB   120MB / 20.2MB   14
+
+--- volumenes ---
+docker system df -v | grep aurum-market || true
+07ff03093cff   cr.weaviate.io/semitechnologies/weaviate:1.38.2        "/bin/weaviate --hos…"   1               20.5kB    11 minutes ago   Up 10 minutes (healthy)     aurum-market-weaviate
+aurum-market-weaviate-data                                         1         10.9MB
+TOTAL VOL. = 10.9MB

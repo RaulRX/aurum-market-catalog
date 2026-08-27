@@ -1,0 +1,49 @@
+{
+  "generado_en": "2026-08-22T12:09:38.624264+00:00",
+  "corpus_evaluado": "catalogo_productos",
+  "consultas": "consultas_desarrollo.csv (8, con juicios ESCI)",
+  "relevancia": {
+    "E": 3,
+    "S": 2,
+    "C": 1,
+    "I": 0
+  },
+  "ranking": {
+    "lexico_tfidf": {
+      "ndcg_at_10": 0.4129,
+      "recall_at_10": 0.151,
+      "mrr_at_10": 0.75,
+      "precision_at_10": 0.4125
+    },
+    "lexico_bm25": {
+      "ndcg_at_10": 0.5088,
+      "recall_at_10": 0.1841,
+      "mrr_at_10": 0.75,
+      "precision_at_10": 0.55
+    },
+    "denso_r01_ganadora": {
+      "plantilla": "A4",
+      "decidida_sobre": "catalogo_productos",
+      "ndcg_at_10": 0.6006,
+      "recall_at_10": 0.2905,
+      "mrr_at_10": 0.9375,
+      "precision_at_10": 0.625
+    }
+  },
+  "pendiente": {
+    "fidelidad_ann": "NB06 · comparar IDs contra el oráculo exacto sobre una muestra",
+    "latencia_busqueda": "NB06 · p50 y p95 con entorno, calentamiento y repeticiones",
+    "filtros": "NB05 · las 4 consultas de consultas_filtradas.csv, marca cumplida",
+    "duplicados": "NB08 · precision, recall y F1 sobre altas_desarrollo.csv",
+    "mutaciones": "NB07 · recuento, lectura por ID y búsqueda tras los 24 eventos"
+  },
+  "artefactos_ausentes": [],
+  "umbral_relevante_recall_mrr": 2.0,
+  "modelo": {
+    "sistema": "gemini-2 [sin_contrato]",
+    "dim": 768,
+    "contrato": "sin_contrato",
+    "ndcg_at_10_muestra": 0.7718,
+    "nota": "R02 se decidió sobre catalogo_muestra; P01 lo confirmó a escala completa"
+  }
+}

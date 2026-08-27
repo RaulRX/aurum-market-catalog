@@ -1,0 +1,28 @@
+# Qdrant — candidato de D12.
+# Adaptado de ../sesion_03/deploy/qdrant/compose.yaml (condición 4 del plan: el
+# material de sesión se copia y se adapta, nunca se importa). Los nombres llevan
+# prefijo propio para que levantar esto no toque los contenedores de la sesión.
+name: aurum-market-qdrant
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.18.2
+    container_name: aurum-market-qdrant
+    ports:
+      - "6333:6333"   # REST + panel web
+      - "6334:6334"   # gRPC, que es el que usa el SDK por rendimiento
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__TELEMETRY_DISABLED: "true"
+    # El paso 10 del guion mide RAM: el límite deja la medición comparable entre
+    # motores y evita que uno solo se coma los 7,9 GB de la máquina.
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/6333"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  qdrant-data:
+    name: aurum-market-qdrant-data

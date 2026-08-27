@@ -1,8 +1,8 @@
 """Carga y perfilado de los ficheros de datos de Aurum Market.
 
 Las funciones de este módulo producen la evidencia numérica que sustenta
-las decisiones D01-D04 de NB00 (docs/PLAN.md). No deciden nada por sí
-mismas: calculan, el humano decide.
+las decisiones D01-D04 de NB00. No deciden nada por sí mismas: solo
+calculan, y la decisión se toma y se registra aparte.
 """
 from __future__ import annotations
 
@@ -58,6 +58,17 @@ def null_field_rates(df: pd.DataFrame, fields: list[str]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def strip_accents(text: str) -> str:
+    """Quita las tildes sin tocar mayúsculas ni minúsculas.
+
+    Vive aparte de `normalize_brand` porque hay un caso que necesita separar los
+    dos ejes: generar cómo *escribiría* una persona un valor —con tilde o sin
+    ella, en minúscula o en mayúscula— exige poder quitar la tilde conservando
+    la caja. Mezclarlo todo en una función haría imposible esa variante."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
 def normalize_brand(value: object, mode: str) -> str | None:
     """Normaliza un valor de marca según D03: raw · casefold · unaccent."""
     if mode not in BRAND_NORMALIZATION_MODES:
@@ -70,8 +81,7 @@ def normalize_brand(value: object, mode: str) -> str | None:
     text = text.casefold()
     if mode == "casefold":
         return text
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return strip_accents(text)
 
 
 def brand_normalization_collisions(

@@ -12,10 +12,14 @@ from aurum.embeddings import (
     GeminiEncoder,
     HubTokenizer,
     SentenceTransformerEncoder,
+    api_cost,
+    api_cost_report,
     cache_key,
     chars_per_token,
     corpus_fingerprint,
+    drift_check,
     encode_corpus,
+    measure_encode_latency,
     safe_l2_normalize,
     token_length_report,
     token_length_stats,
@@ -264,6 +268,29 @@ def test_encoder_sin_tareas_declara_que_no_tiene_contrato():
     assert "task" not in modelo.llamadas[0]
 
 
+def test_los_pesos_no_se_cargan_al_construir_el_encoder():
+    """Con todos los vectores en caché, `encode_corpus` nunca llama a `encode` y
+    el modelo no hace falta. Cargarlo en el constructor costaría 2,3 GB y varios
+    minutos por un objeto que solo va a servir de llave de la caché.
+
+    El repositorio no existe: si la carga fuera ansiosa, esto reventaría."""
+    encoder = SentenceTransformerEncoder("repo/que-no-existe", window=512, native_dim=4)
+
+    assert encoder.native_dim == 4
+    assert encoder.has_contract is False
+
+
+def test_sin_dimension_declarada_no_queda_mas_remedio_que_abrir_el_modelo():
+    """El único que sabe la dimensión nativa es el modelo. Se documenta con un
+    test para que la excepción a la carga perezosa sea deliberada y no un
+    despiste."""
+    modelo = ModeloFalso(dim=32)
+
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=modelo)
+
+    assert encoder.native_dim == 32
+
+
 def test_encoder_local_rechaza_un_kind_desconocido():
     encoder = SentenceTransformerEncoder("x", window=512, model=ModeloFalso())
 
@@ -478,3 +505,153 @@ def test_encode_corpus_funciona_sin_cache():
 
     assert resultado.vectors.shape == (1, 4)
     assert resultado.stats.n_textos == 1
+
+
+# ─────────────── Coste, latencia y deriva: el encoder en producción ──────────
+
+
+def test_la_latencia_se_mide_de_una_consulta_en_una():
+    """El camino online codifica una consulta suelta. Si la medición mandara
+    lotes, el viaje de red se repartiría entre varias y saldría un número que
+    en producción no ocurre nunca."""
+    modelo = ModeloFalso()
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=modelo)
+
+    measure_encode_latency(
+        encoder, ["taladro 24v", "lentejas"], repeticiones=4, calentamiento=0
+    )
+
+    assert [llamada["n"] for llamada in modelo.llamadas] == [1, 1, 1, 1]
+
+
+def test_el_calentamiento_no_entra_en_las_muestras():
+    """La primera llamada paga TLS o reserva de memoria, y eso no se repite en
+    cada consulta: contarla inflaría el p95 con un coste que no existe."""
+    modelo = ModeloFalso()
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=modelo)
+
+    informe = measure_encode_latency(
+        encoder, ["consulta"], repeticiones=3, calentamiento=2
+    )
+
+    assert len(modelo.llamadas) == 5
+    assert informe["n_llamadas"] == 3
+
+
+def test_la_latencia_recorre_los_textos_en_ciclo():
+    modelo = ModeloFalso()
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=modelo)
+
+    measure_encode_latency(encoder, ["a", "b"], repeticiones=4, calentamiento=0)
+
+    assert len(modelo.llamadas) == 4
+
+
+def test_la_latencia_exige_textos_y_repeticiones():
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=ModeloFalso())
+
+    with pytest.raises(ValueError, match="textos"):
+        measure_encode_latency(encoder, [], repeticiones=2)
+    with pytest.raises(ValueError, match="repeticiones"):
+        measure_encode_latency(encoder, ["a"], repeticiones=0)
+
+
+def test_el_coste_es_proporcional_a_los_tokens():
+    assert api_cost(1_000_000, precio_por_millon=0.20) == pytest.approx(0.20)
+    assert api_cost(500_000, precio_por_millon=0.20) == pytest.approx(0.10)
+
+
+def test_el_coste_rechaza_valores_negativos():
+    with pytest.raises(ValueError, match="negativos"):
+        api_cost(-1, precio_por_millon=0.20)
+
+
+def test_el_informe_traduce_la_reindexacion_a_consultas():
+    """La cifra que ordena las dos partidas: el coste por consulta suelta es
+    demasiado pequeño para decir nada por sí mismo."""
+    informe = api_cost_report(
+        tokens_indexacion=1_000_000, tokens_por_consulta=10, precio_por_millon=0.20
+    )
+
+    assert informe["indexacion_completa_usd"] == pytest.approx(0.20)
+    assert informe["consultas_equivalentes_a_reindexar"] == 100_000
+
+
+def test_el_informe_estima_el_gasto_mensual_si_le_dan_el_volumen():
+    informe = api_cost_report(
+        tokens_indexacion=1_000,
+        tokens_por_consulta=10,
+        precio_por_millon=0.20,
+        consultas_mes=1_000_000,
+    )
+
+    assert informe["mes_consultas_usd"] == pytest.approx(2.0)
+
+
+def test_cada_columna_del_informe_lleva_su_unidad_en_el_nombre():
+    """La tabla mezcla dólares, consultas y ratios. Sin la unidad en el nombre
+    hay que deducir de cuál es cada columna, y una cifra de coste mal leída es
+    la clase de error que nadie detecta mirando la tabla."""
+    informe = api_cost_report(
+        tokens_indexacion=1_000,
+        tokens_por_consulta=10,
+        precio_por_millon=0.20,
+        consultas_mes=100,
+    )
+
+    en_dolares = {clave for clave in informe if clave.endswith("_usd")}
+    assert set(informe) - en_dolares == {"consultas_equivalentes_a_reindexar"}
+
+
+class ModeloQueCambia:
+    """Un modelo que devuelve otra cosa que la última vez: la deriva silenciosa
+    del proveedor, que no lanza ninguna excepción."""
+
+    def __init__(self, valor: float, dim: int = 4) -> None:
+        self.valor = valor
+        self.dim = dim
+
+    def get_sentence_embedding_dimension(self) -> int:
+        return self.dim
+
+    def encode(self, texts, **kwargs):
+        return np.array([[self.valor, 1.0, 0.0, 0.0]] * len(texts), dtype=np.float32)
+
+
+def test_sin_cambios_el_coseno_es_uno():
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=ModeloQueCambia(1.0))
+    referencia = np.array([[1.0, 1.0, 0.0, 0.0]], dtype=np.float32)
+
+    informe = drift_check(encoder, ["ficha"], referencia)
+
+    assert informe["sin_deriva"] is True
+    assert informe["coseno_min"] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_un_modelo_actualizado_se_detecta_por_el_coseno():
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=ModeloQueCambia(-1.0))
+    referencia = np.array([[1.0, 1.0, 0.0, 0.0]], dtype=np.float32)
+
+    informe = drift_check(encoder, ["ficha"], referencia)
+
+    assert informe["sin_deriva"] is False
+    assert informe["n_desviados"] == 1
+
+
+def test_un_cambio_de_dimension_se_informa_en_vez_de_reventar():
+    """El coseno ni siquiera se puede calcular, y un error de álgebra no diría
+    qué ha pasado."""
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=ModeloQueCambia(1.0))
+    referencia = np.ones((1, 8), dtype=np.float32)
+
+    informe = drift_check(encoder, ["ficha"], referencia)
+
+    assert informe["sin_deriva"] is False
+    assert "dimensión" in informe["motivo"]
+
+
+def test_la_deriva_exige_una_referencia_por_texto():
+    encoder = SentenceTransformerEncoder("a/b", window=512, model=ModeloQueCambia(1.0))
+
+    with pytest.raises(ValueError, match="vectores de referencia"):
+        drift_check(encoder, ["una", "otra"], np.ones((1, 4), dtype=np.float32))

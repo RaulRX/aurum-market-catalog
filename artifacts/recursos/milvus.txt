@@ -1,0 +1,15 @@
+docker stats --no-stream
+CONTAINER ID   NAME                        CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O         PIDS
+8f6500c8d17b   aurum-market-milvus         7.36%     244.1MiB / 3GiB     7.95%     40.4MB / 28.4MB   461MB / 10.5MB    54
+21b80d62b1f8   aurum-market-milvus-etcd    0.98%     32.07MiB / 512MiB   6.26%     226kB / 157kB     41.8MB / 2.47MB   10
+41ed0fddf375   aurum-market-milvus-minio   0.00%     254.6MiB / 512MiB   49.72%    28MB / 30.3MB     130MB / 28.1MB    10
+
+--- volumenes ---
+docker system df -v | grep aurum-market || true
+8f6500c8d17b   milvusdb/milvus:v2.6.18                                "/tini -- milvus run…"   1               86kB      2 minutes ago   Up 2 minutes (healthy)      aurum-market-milvus
+21b80d62b1f8   quay.io/coreos/etcd:v3.5.18                            "etcd --advertise-cl…"   1               24.6kB    2 minutes ago   Up 2 minutes (healthy)      aurum-market-milvus-etcd
+41ed0fddf375   minio/minio:RELEASE.2025-04-22T22-12-26Z               "/usr/bin/docker-ent…"   2               28.7kB    2 minutes ago   Up 2 minutes (healthy)      aurum-market-milvus-minio
+aurum-market-milvus-data                                           1         10.32MB
+aurum-market-milvus-etcd                                           1         144.9MB
+aurum-market-milvus-minio                                          1         27.72MB
+TOTAL VOL. = 182.94MB

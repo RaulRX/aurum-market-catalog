@@ -10,13 +10,6 @@ data/**
 # notebook (baseline_lexico, comparativa_modelos, comparativa_representacion).
 artifacts/embeddings/
 
-# Material de estudio de las sesiones del máster: se consulta como referencia,
-# pero ninguna función se importa desde ahí — lo que se reutiliza se copia y se
-# adapta dentro de src/aurum/.
-notebooks/sesiones/**
-src/vector_index_session/
-src/vector_search_session/
-
 # Jupyter
 .ipynb_checkpoints
 
@@ -28,5 +21,6 @@ venv/
 
 # Cachés de herramientas (pytest, bytecode) — no son estructura del proyecto
 __pycache__/
-**/__pycache__/
 .pytest_cache/
+
+.gitkeep

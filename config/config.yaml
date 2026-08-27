@@ -1,6 +1,6 @@
 # Configuración de la ejecución — Aurum Market
 # Se completa notebook a notebook. Cada decisión D0x/R0x se escribe aquí
-# en cuanto se ratifica (docs/PLAN.md § Protocolo de trabajo).
+# en cuanto se ratifica, antes de escribir el código que la aplica.
 
 nb00_datos:
   d01_relevancia_recall_mrr: E_mas_S  # E | E_mas_S — qué cuenta como relevante para Recall@10/MRR@10 (nDCG usa E=3,S=2,C=1,I=0 siempre)
@@ -17,9 +17,9 @@ nb01_baseline:
   metricas_ciegas: jaccard_at_10  # las 12 consultas de evaluación no tienen juicios: nDCG es incalculable, se mide coherencia entre formulaciones
 
 nb02_modelo:
-  # Orden intercambiado respecto al plan original: el modelo se decide ANTES que la
-  # plantilla. Congelar la plantilla en A0 (la columna `text` tal cual) no es una
-  # elección de diseño; congelar un modelo sí lo habría sido. Ver docs/PLAN.md.
+  # Orden intercambiado respecto al planteamiento inicial: el modelo se decide ANTES
+  # que la plantilla. Congelar la plantilla en A0 (la columna `text` tal cual) no es
+  # una elección de diseño; congelar un modelo sí lo habría sido.
   plantilla_congelada: A0
   corpus_comparacion: catalogo_muestra  # condición 3; el ganador se confirma sobre el catálogo completo
 
@@ -97,13 +97,93 @@ nb02_modelo:
                           # Consecuencia aceptada: si gana, reproducir el índice desde cero
                           # exige clave de Google. Se documenta en el README.
 
+  # Criterios de selección de arquitectura (sesion_01 §9) que el barrido no cubría.
+  # Se añaden DESPUÉS de R02, como auditoría de una decisión ya tomada y no como
+  # parte de ella: si alguno contradijera el orden del barrido —el ganador por
+  # nDCG siendo el más inestable entre formulaciones, por ejemplo— R02 se revisa.
+  # Medido en NB02 secciones J, K y L.
+  criterios_arquitectura:
+    calidad_por_slices:            # criterio 1
+      slice: formulacion           # jaccard_at_10 entre direct/context/semantic
+      corpus: catalogo_muestra     # donde estan codificados los modelos que compiten
+      alcance: 4 intenciones x 3 formulaciones; detecta un derrumbe, no separa empates
+      modelos_medidos: [gemini-2, granite-311m-r2]
+      resultado: >
+        RATIFICADO: no contradice a R02. gemini-2 se mantiene estable entre la
+        formulacion directa y la semantica y gana tambien de promedio, en el mismo
+        orden que da ndcg_at_10. La ventaja del ganador no era afinidad con las 8
+        consultas de desarrollo, asi que la eleccion del modelo queda confirmada
+        por un slice que no comparte sus juicios.
+      jina_excluido: >
+        Declarado en el registro de modelos de NB02 (`ciegas: False`), no saltado en
+        una celda. Codificar sus 12 ciegas exige cargar 572M de parametros (2,3 GB de
+        los 7,9 de la maquina) y el barrido ya lo dejo ultimo de los tres, por debajo
+        del baseline lexico. La pregunta de la seccion es cual de los dos modelos que
+        compiten de verdad aguanta un cambio de formulacion; anadir al descartado no
+        cambia esa respuesta. Limitacion del equipo asumida sobre un orden ya medido.
+
+    latencia_online:               # criterio 3 — el camino que el barrido no mide
+      que: latencia de codificar UNA consulta, no un lote de ocho
+      repeticiones: 20             # RATIFICADO tras medir: ver `repeticiones_por_que`
+      calentamiento: 2             # no se contabiliza: TLS y reserva de memoria no se repiten
+      repeticiones_por_que: >
+        Se mantienen las 20 porque la medicion no las desmiente: entre el tiempo
+        tipico y el peor hay unos 30 ms, no un factor de tres. Con esa dispersion
+        el p95 no lo esta fijando un caso aislado y subir el numero de muestras
+        solo compraria decimales.
+
+    coste_api:                     # criterio 2
+      precio_por_millon_usd: 0.20  # DATO del proveedor, tarifa estandar de pago
+      precio_batch_por_millon_usd: 0.10  # sirve para indexar, no para responder a un usuario
+      fuente: https://ai.google.dev/gemini-api/docs/pricing
+      consultado: 2026-08-17
+      tokenizador_para_estimar: jina-v3  # gemini no publica el suyo; margen de decenas de %
+
+    versionado_y_migracion:        # criterio 6 — el mas flojo de los seis
+      problema: >
+        `gemini-embedding-2` es un endpoint gestionado. El proveedor puede
+        reapuntar el identificador y los vectores nuevos dejarian de vivir en el
+        mismo espacio que los 15.000 indexados, sin lanzar ninguna excepcion.
+        La API no devuelve version que anotar en el metadata.
+      control: canario de recodificacion (drift_check)
+      canario_pct_corpus: 5        # DECISION: 5 % del corpus indexado
+      canario_n_fichas: 750        # sobre los 15.000 del catalogo (75 sobre la muestra de NB02)
+      canario_suelo: 16            # en corpus pequenos, para que no baje de ahi
+      canario_coste: ~20 s y menos de 0,1 USD por comprobacion sobre el catalogo completo
+      canario_por_que: >
+        No es un muestreo: si el proveedor cambia el modelo cambian TODOS los
+        vectores, no un porcentaje, asi que una sola ficha bastaria para
+        detectarlo. El tamano compra variedad, para no pasar por alto un cambio
+        parcial que mueva unas zonas del espacio y no otras. El 5 % es el punto
+        donde eso sigue costando segundos: un guardian de un minuto es un
+        guardian que se acaba saltando justo antes de los eventos.
+      canario_seleccion: >
+        Las primeras N fichas del corpus, deterministas para poder compararlas
+        siempre contra los mismos vectores guardados. Ya son variadas porque el
+        catalogo no esta ordenado por ningun atributo: sobre las primeras 750,
+        color vacio 40,4 % (37,4 % global), marca vacia 3,7 % (4,4 %), mediana de
+        1.012 caracteres (936) y 675 marcas distintas.
+      tolerancia_coseno: 0.001     # RATIFICADA: la comprobacion no dio deriva ni falsos positivos
+      cuando_se_ejecuta: antes de aplicar los eventos de NB08
+      hereda_nb04: >
+        (1) el nombre de la coleccion lleva modelo, plantilla y dimension;
+        (2) migrar es construir la coleccion nueva al lado y cambiar el puntero,
+        nunca reindexar sobre la viva.
+
+    privacidad:                    # criterio 5 — la parte que D11 no peso
+      catalogo: informacion publica; una ficha existe para ser vista
+      consultas: >
+        dato de usuario, y el unico del sistema que no era publico antes de
+        entrar en el. Salen a la API en CADA busqueda, no solo al indexar.
+      justificacion_readme: pendiente — se redacta en el README (condicion 8 del plan)
+
   # ⚠️ PENDIENTES DE NB02 — R02 no se puede ratificar sin cerrar los tres.
   # Se anotan aquí y no en una nota mental porque los tres son fáciles de saltarse
   # y los tres invalidan la decisión si se saltan.
   pendientes:
     - id: P01
       que: Confirmar el modelo ganador sobre el catálogo completo, no solo sobre la muestra.
-      estado: parcial   # confirmado denso-vs-lexico y la dimension; falta el orden entre densos
+      estado: cerrado   # como LIMITACION DECLARADA del equipo, no porque se midiera
       resuelto_hasta_ahora: >
         NB02 seccion I recodifico al ganador (gemini-2 [sin_contrato]) sobre los 15.000
         productos y lo evaluo contra el baseline lexico ya medido sobre ese mismo corpus.
@@ -114,10 +194,22 @@ nb02_modelo:
       lo_que_falta: >
         El orden ENTRE modelos densos a escala completa. Recodificar jina-v3 y
         granite-311m-r2 sobre 15.000 docs son ~16 h y ~49 h de CPU (extrapolacion lineal
-        desde los tiempos medidos sobre la muestra). Queda declarado como limite del
-        experimento: con gemini-2 sacando 0.22 sobre granite en la muestra, el riesgo de
-        inversion es bajo, pero no es cero.
-      bloquea: [R02, NB04]
+        desde los tiempos medidos sobre la muestra).
+      resolucion: >
+        Se cierra como LIMITACION DEL EQUIPO en el que se ejecuta el trabajo, no como
+        comprobacion realizada: i5-6300HQ de 4 nucleos sin GPU y 7,9 GB de RAM. Las ~65 h
+        de CPU que costaria el orden completo entre densos no caben en el calendario de
+        la practica, y el riesgo que cubren es bajo: gemini-2 le saca 0.22 de nDCG@10 a
+        granite sobre la muestra, muy por encima de cualquier reordenacion plausible al
+        multiplicar por diez los distractores. Bajo no es cero, y por eso queda escrito
+        aqui y en el README en vez de darse por supuesto.
+      ejecucion_pendiente: >
+        La medicion sigue siendo la forma de cerrarlo del todo y esta pendiente de
+        realizar, no descartada: en una maquina con GPU o con tiempo de calendario
+        disponible, re-ejecutar el bloque B con CORPUS_ID="catalogo_productos" para
+        jina-v3 y granite-311m-r2 zanjaria la duda. La cache distingue los corpus por
+        SHA-256, asi que hacerlo mas adelante no invalida nada de lo ya medido.
+      bloquea: []   # ya no bloquea NB04: la limitacion esta declarada y asumida
       por_que: >
         El barrido de NB02 corre sobre catalogo_muestra (1.500 docs) por la condición 3
         del plan, pero el enunciado (§6, "Condiciones de comparabilidad") dice que
@@ -198,6 +290,336 @@ nb02_modelo:
         el tiempo, remedir los dos modelos seguidos, en la misma sesion y sin otra
         carga: bastan 200 documentos por modelo para comparar textos/s.
       coste_estimado: minutos si hay que remedir (200 docs por modelo), cero si no.
+
+nb04_motor:
+  # Los requisitos se escriben ANTES de mirar ningun motor (Regla 6 del plan:
+  # fijar la restriccion antes de elegir). Medidos en NB04 seccion A.
+  corpus_por_defecto: catalogo_productos  # al reves que NB02/NB03: aqui se decide
+                                          # sobre el indice que se construye de verdad.
+                                          # La muestra vuelve en la prueba de humo.
+
+  # D12 · Que motores van a la prueba de humo. Decidido ANTES de ejecutar el
+  # guion; se escribe aqui tarde, no se decidio tarde.
+  d12_motores: [qdrant, weaviate, milvus]
+  d12_orden_de_preferencia: >
+    Qdrant, Weaviate, Milvus. Es la expectativa previa, no el resultado: R03
+    sale de la tabla y si la contradice, manda la tabla.
+  d12_criterio: >
+    Dos filtros: el requisito duro de la seccion B -buscar texto dentro de un
+    campo de metadatos- y el coste operativo en 7,9 GB.
+  d12_milvus_por_que_entra: >
+    Son tres contenedores en una maquina de 7,9 GB, justo lo que el plan marca
+    como pesado. Entra igual: descartarlo por la etiqueta en vez de por una
+    medicion propia es lo que §3.1 prohibe. Se levanta el ultimo y solo.
+
+  # Los que no entraron, en primera persona (condicion 8).
+  d12_fuera_por_que_decision:
+    chroma: >
+      Cae por mi condicion de filtrar por color. Su `contains` no busca dentro
+      de un campo de metadatos sino en el documento entero, y eso no es filtrar
+      por color: casaria con productos cuyo titulo dice "negro" pero cuyo color
+      es otro. No alcanza menos, alcanza mal.
+    pinecone: >
+      Fuera por el enunciado y no por mi: es cloud, y el corrector no puede
+      heredar costes ni abrirse una cuenta. Su filtro de metadatos tampoco
+      tiene subcadena, asi que habria caido igual.
+    faiss: >
+      Nunca fue candidato. No es un motor, es un generador de indices: no
+      persiste metadatos y su HNSW no admite borrado arbitrario, que son dos de
+      las condiciones no negociables. Su sitio es NB06, como oraculo exacto.
+
+  # pgvector NO esta descartado: cumple. Va aparte para que no se lea como uno
+  # mas de la lista de arriba.
+  d12_aplazado_por_que_decision:
+    pgvector: >
+      No lo descarto, lo aplazo: cumple todos los requisitos, pero con tres
+      motores medidos tengo suficiente para arrancar. Y meterlo no seria
+      anadir un adaptador mas: el payload pasaria a ser columnas y D14 se
+      reabriria, porque en SQL `''` y `NULL` no son lo mismo. Queda abierto.
+
+  # Indice sobre los campos filtrables. No fue una eleccion abierta: el
+  # `contains` de Qdrant es `MatchText` sobre un indice de texto declarado al
+  # crear la coleccion, asi que sin indice no hay requisito duro que cumplir.
+  indice_payload:
+    campos: [brand_normalized, color_normalized]
+    por_que: >
+      Einhell son 30 productos de 15.000 (0,2 %). Con 9.054 marcas, un filtro
+      sin indice recorre el catalogo entero para devolver treinta puntos.
+    donde: aurum.motores.{qdrant,weaviate,milvus} al crear la coleccion
+
+  # R03 · Motor elegido. RATIFICADO sobre la tabla de humo
+  # completa (artifacts/comparativa_motores.md), no sobre una preferencia previa
+  # -y coincide con ella, que es distinto de sustituirla-.
+  r03_motor: qdrant
+  r03_a_la_vista_de: >
+    Los 10 pasos contra los tres motores, el nivel de `contains` de la seccion
+    B, y los seis criterios de sesion_01 -de los que memoria del indice y
+    dependencia del proveedor son los que mas se mueven al elegir motor-.
+  r03_por_que_decision: >
+    Elijo Qdrant. Es el unico que cumple el requisito duro sin pagar el precio
+    de la subcadena: filtra por palabras, asi que `rosa` no arrastra `rosado`
+    como si haria un motor de nivel 3. La necesidad de `contains` nace de que
+    `color` es texto libre, y de esa misma suciedad viene la limitacion
+    morfologica (`negro` / `negra`), que sigue ahi -pero la tienen los tres, no
+    es de este-.
+
+    Ademas es el unico que informa del estado de indexacion, que §3.2 pide
+    verificar antes de aceptar consultas. Su consumo de RAM y su coste de
+    ingesta son asumibles -36,4 MiB en un unico contenedor-, trae panel web
+    propio y usable, y no tiene coste de suscripcion. Queda por comparar que
+    anadiria una version de pago, pero eso no condiciona esta entrega.
+  r03_lo_que_no_pesa: >
+    El coste cero no elige: los tres son open source y autoalojados, asi que
+    cumplen el presupuesto de A.1 por igual. Se anota para que no se lea como
+    un argumento a favor de Qdrant cuando no distingue a nadie.
+  r03_donde_pierde_el_elegido: >
+    En el paso 9. Con el motor caido, Qdrant sube `grpc.RpcError` en vez de una
+    excepcion propia del SDK. Es una clase publica y el mensaje es descriptivo
+    -UNAVAILABLE, puerto y conexion rechazada-, asi que cumple el criterio; lo
+    que pasa es que el tipo depende del transporte. El adaptador habla gRPC por
+    el 6334 y por REST la excepcion seria otra, de modo que el error tipado de
+    NB05 tiene que envolver los dos casos. Analizar el tipo de error es trabajo
+    de NB05, no de aqui.
+
+  # ── El indice que se entrega (NB04 seccion G) ────────────────────────────
+  # §3.2: "definid esquema, dimension, metrica, IDs, metadatos y politica de
+  # valores nulos". Esta es esa declaracion, en un solo sitio.
+  indice_definitivo:
+    coleccion: aurum_catalogo__gemini_embedding_2__A4__768
+    prefijo: aurum_catalogo
+    prefijo_por_que: >
+      Distinto del `aurum_humo` de la prueba de humo, y a proposito: el guion de
+      humo recrea su coleccion en cada pasada, asi que con un prefijo comun una
+      errata bastaria para llevarse los 15.000 puntos. Separados, no puede.
+    nombre_por_que: >
+      Lleva modelo, plantilla y dimension porque los tres invalidan los vectores
+      si cambian. Es la mitad del criterio 6: migrar es construir la coleccion
+      nueva AL LADO y cambiar el puntero, y con el contrato en el nombre las dos
+      pueden convivir mientras dure la migracion.
+    id_del_punto: record_id      # UUIDv5, lo impone README_DATOS
+    modelo: gemini-embedding-2   # R02
+    contrato: sin_contrato
+    plantilla: A4                # R01
+    corte_chars: 936             # mediana de `text` en los 15.000
+    dim: 768                     # D09b, truncada de 3.072 y renormalizada
+    metrica: cosine              # D10
+    payload: completo            # D13
+    nulos: cadena_vacia          # D14
+    lote: 128                    # D15
+    indices_payload:
+      brand_normalized: keyword
+      color_normalized: texto (tokenizador de palabras)
+    recreate_por_defecto: false  # al reves que el guion de humo: esta es la buena
+
+    ann: por_defecto_del_motor
+    ann_por_que: >
+      La seccion G construye el indice con la configuracion ANN que trae Qdrant,
+      sin tocarla. Lo que se prueba aqui es el MOTOR contra el catalogo completo
+      -ingesta sin duplicar, esquema declarado, persistencia, canarios-, y para
+      eso los parametros del grafo no hacen falta. Elegirlos ahora ademas seria
+      un error de orden: D16 fija el recall minimo y el p95 maximo ANTES de ver
+      la curva, y unos valores escogidos aqui se acabarian justificando con lo
+      que saliera.
+    ann_donde_se_estudia: >
+      NB06. Alli se barre `ef`, que se ajusta por consulta y no obliga a
+      reconstruir. Si el barrido tocara `m` o `ef_construct`, que se fijan al
+      construir, haria falta un indice nuevo al lado -la operacion que el
+      criterio 6 ya contempla-.
+    canario_de_aceptacion: >
+      Tres puntos buscados con su PROPIO vector, que deben volver los primeros.
+      No se usa una consulta juzgada: que un relevante entre en el top-10 es una
+      pregunta de calidad -Recall@10 de 0,26- y fallaria con el indice sano. La
+      busqueda de si mismo no depende del modelo y caza la desalineacion entre
+      vector y payload, que es la averia que recuento, dimension e idempotencia
+      no ven.
+
+  # Se anota para que dentro de un mes no se recuerde como "Milvus reordenaba".
+  # Seccion F.3e del notebook.
+  observacion_milvus_paso_8:
+    que_se_vio: >
+      En la primera medicion del paso 8, Milvus mantuvo el count() y devolvio
+      otro top-10 tras el reinicio. Fue la unica vez que paso.
+    como_se_comprobo: >
+      Tres lecturas sobre una coleccion reingerida -recien_ingerido, asentado
+      (3 min despues sin tocar nada) y tras_reinicio- para separar el tiempo
+      del reinicio, que la medicion original confundia. Los tres pares
+      salieron identicos.
+    conclusion: >
+      No se reproduce por ninguna via. Y la hipotesis del indice asentandose
+      queda descartada a esta escala: con 1.500 puntos no hay ventana en la
+      que el indice no este al dia.
+    variable_no_controlada: >
+      La primera vez, la lectura «antes» vino justo despues de probar_filtros,
+      que arranca reponiendo un punto con upsert(batch_size=1). En la
+      comprobacion esa celda no se ejecuto, asi que no habia ninguna escritura
+      reciente. No se afirma que sea la causa: es lo unico, ademas del tiempo,
+      que distingue las dos ejecuciones.
+    donde_sigue: >
+      NB08. "Escribo un punto, leo enseguida, reinicio y cambia el resultado"
+      es exactamente su pregunta -el enunciado la llama saber esperar, fallar o
+      informar- y alli ya estara montado el instrumental de visibilidad.
+
+  filtros:
+    # El enunciado solo pide marca. El color es una MEJORA PROPIA y por eso pasa
+    # por la misma evidencia que el resto, no por "suena bien".
+    campos: [brand, color]
+    obligatorio: brand    # las 4 consultas de consultas_filtradas.csv
+    extra: color          # anadido en NB04; no puede alterar el comportamiento de brand
+
+    politica_normalizacion: casefold_unaccent   # la misma D03 de brand, extendida a color
+    politica_normalizacion_por_que: >
+      Una sola funcion (almacen.add_normalized_key) para los dos campos, para
+      que no acaben normalizandose distinto. El valor se guarda crudo y se
+      normaliza al buscar, asi que cada punto lleva su clave derivada: sin ella
+      el filtro nativo compara byte a byte contra el crudo y D03 no se cumple.
+
+    claves_derivadas: [brand_normalized, color_normalized]
+
+    match:
+      brand: equals       # vocabulario cerrado por producto: una marca por ficha
+      color: contains     # DECISION: un valor de color puede llevar varios dentro
+      color_por_que: >
+        `color` no es una taxonomia sino texto libre: hay compuestos
+        ("Negro/Rojo", "Negro (Black)") y de dos palabras ("azul marino"). Con
+        igualdad estricta, quien pide un color no ve los compuestos que tambien
+        lo son. Medido en la seccion B sobre los tres colores mas frecuentes del
+        catalogo, no sobre una lista elegida a mano.
+      coste_declarado: >
+        Alcanza mas, pero tambien entra donde lo buscado esta dentro de otra
+        palabra. B.3 lo cuenta (n_dentro_de_otra_palabra y su % del alcance) en
+        vez de suponerlo, y lo mide sobre la clave normalizada: el coste hay que
+        verlo en la configuracion que se despliega, no en el valor crudo.
+
+    # ⚠️ LIMITACION DECLARADA — no depende del motor elegido (R03).
+    limitacion_morfologica:
+      que: >
+        El filtro de color no relaciona genero ni numero. `negro` y `negra` son
+        cadenas distintas y ninguna contiene a la otra, asi que no se encuentran
+        entre si ni por subcadena ni por palabras. No es de un motor concreto:
+        la tienen los tres.
+      medido_en: catalogo_muestra (1.500 registros), NB04 seccion B
+      cifras: >
+        `negro`: 215 por subcadena, 212 por palabras. `negra`: 3 con las dos
+        politicas, y ninguno de esos 3 esta entre los 215 ni entre los 212. Los
+        3 de diferencia entre 215 y 212 son otra cosa: `negro` dentro de otra
+        palabra, los falsos positivos de B.3 que el nivel 2 evita.
+      asimetria: >
+        Desigual en las dos direcciones. Quien busca `negro` pierde 3 productos;
+        quien busca `negra` recibe esos 3 y pierde los otros 212. Lo segundo es
+        mucho peor: la forma menos frecuente devuelve algo plausible y oculta el
+        grueso del catalogo sin avisar.
+      impacto: 3 de 1.500 en la muestra (0,2 %) para la forma masculina
+      por_que_no_se_arregla: >
+        Las salidas serian stemming en el tokenizador o normalizar el genero al
+        construir `color_normalized`. Las dos anaden un eje que habria que medir
+        -cuantos casos une de mas- y ninguna la pide el enunciado, que solo
+        exige marca. Queda como limitacion conocida, que es lo que §5 llama
+        "atribucion de errores: datos o filtros, el metadato es inconsistente".
+      afecta_a: color unicamente; `brand` va con igualdad y no tiene flexion
+
+    # Bajo que condicion dejaria de discriminar el requisito duro entre motores.
+    cuando_dejaria_de_importar_el_nivel_de_contains:
+      condicion: >
+        Que `color` fuera una taxonomia limpia: un color por registro, de
+        vocabulario cerrado y sin que ningun valor sea subcadena de otro.
+        Entonces `like '%x%'` no podria dar falsos positivos y los tres motores
+        empatarian en este eje.
+      como_se_comprueba: >
+        No hace falta mirarlo a ojo: la condicion ES `n_dentro_de_otra_palabra
+        == 0` para todos los colores filtrados (B.3). Si esa columna sale a
+        cero, la subcadena es segura y el nivel 2 deja de ser una ventaja.
+      estado_hoy: >
+        NO se cumple. La muestra trae "2 unidades negra", "Negro, 1 Piezas",
+        "negra + oro rosa" o "como se muestra": cantidades, recuentos y varios
+        colores en el mismo campo. Y `oro` es subcadena de `incoloro`, que es el
+        caso que fijan los tests.
+      consecuencia_si_cambiara: >
+        R03 se decidiria por los otros criterios -memoria, control del ANN,
+        calidad del error, dependencia del proveedor- sin que el nivel de
+        `contains` pese. Reevaluarlo si el catalogo se limpia o si el color pasa
+        a venir de un desplegable.
+
+    requisito_al_motor: duro
+    requisito_al_motor_consecuencia: >
+      El motor DEBE saber buscar texto dentro de un campo de metadatos. Quien no
+      pueda queda fuera sin prueba de humo. Se acepta sabiendo a quien descarta:
+      a los motores cuyo filtro de metadatos es solo igualdad y comparacion.
+
+    # ⚠️ Deuda de procedimiento saldada: la evidencia del color se calculo primero
+    # en la terminal, contra la condicion 1 del plan. Ahora vive en
+    # src/aurum/almacen.py (filter_field_profile, filter_reach,
+    # combined_filter_selectivity) con tests y celdas.
+
+    seleccion_combinada:
+      funcion: almacen.combined_filter_selectivity
+      que_mide: cuantos productos sobreviven al cruce marca x color (NB04 seccion B.5)
+      por_que_las_columnas_de_cobertura: >
+        Un cruce con cero supervivientes es ambiguo: o la marca no tiene ningun
+        producto de ese color -un hecho del catalogo- o sus productos no lo
+        tienen anotado -un hecho de la cobertura, con un 37,39 % de colores
+        vacios-. La tabla separa las dos cosas (n_brand_con_color /
+        n_brand_sin_color) y marca la segunda con cero_por_falta_de_dato, para
+        que no se lea como la primera.
+
+  # ── Esquema del punto (NB04 secciones C, D y E) ───────────────────────────
+  # Las tres decididas el 2026-08-20 sobre las tablas de esas secciones.
+  # Las razones van en primera persona; la redaccion definitiva del README
+  # las recoge tal cual (condicion 8 del plan).
+
+  d13_payload: completo   # minimo | completo | completo_con_text
+  d13_campos: [product_id, title, brand, color, catalog_version, active]
+  d13_por_que_decision: >
+    Completo sin `text`, porque el porcentaje sobre los vectores es muy superior
+    llevandolo. Y para los metadatos, el texto es en su mayoria descripcion que
+    no aporta lo que buscamos aqui.
+  d13_nota_tecnica: >
+    `minimo` no llego a competir, y no por preferencia: lo descartan los
+    notebooks de despues. NB05 necesita `title` (§3.3 exige devolverlo), NB08
+    `catalog_version` y `active`, NB07 `title` y `color`. `text` es el unico
+    campo que nadie vuelve a abrir.
+  d13_matiz_pendiente_de_confirmar: >
+    Ojo al redactar el README: NB03 midio que A4 -el `text` recortado por la
+    mediana- GANA a las plantillas cortas, asi que el texto si lleva
+    significado. Lo que sostiene la decision es otra cosa: ese significado ya
+    esta en el vector, y copiarlo al payload solo serviria para reconstruir el
+    indice sin el CSV.
+
+  d14_nulos_payload: cadena_vacia   # omitir_campo | cadena_vacia | centinela
+  d14_afecta_a: brand 4,39 % vacio · color 37,39 % vacio (mas de 5.600 productos)
+  d14_por_que_decision: >
+    Conviene mas tener el campo pero vacio, porque de esa manera podremos
+    obtenerlos listando aquellos que no tengan una marca definida.
+  d14_argumentos_adicionales: >
+    NO usados en la decision, anotados por si refuerzan el README. (1) Listar
+    los vacios tambien sale con `omitir_campo`: los tres candidatos tienen su
+    condicion de nulo. Lo que si separa a las opciones es la uniformidad entre
+    motores -con cadena vacia la condicion es `campo == ""` en los tres, y R03
+    aun no esta decidido- y que todos los puntos tengan la misma forma, lo que
+    simplifica recorrer el payload en resultados_busqueda.csv. (2) Contra el
+    centinela: el enunciado dice "no debeis corregir el dataset a mano", y
+    escribir "desconocido" inventa un valor que el origen no tiene; la cadena
+    vacia declara el hueco sin inventarlo.
+  d14_consecuencia_para_nb05: >
+    Un `contains ""` casa con todo: si la consulta llega vacia y el filtro se
+    construye sin validar, deja de filtrar. Es validacion de entrada, y §3.3 la
+    pide con todas las letras ("tratamiento explicito de colecciones vacias,
+    filtros sin resultados y proveedores no disponibles").
+
+  d15_lote_ingesta: 128   # 64 | 128 | 256
+  d15_por_que_decision: >
+    Son fallos mas pequenos, pero con lotes pequenos hay mas envios y el
+    porcentaje de reenvios aumenta por el numero. Elijo 128 para estar en un
+    termino medio: ni un numero grande de fallos ni un limite cercano.
+  d15_lo_que_no_decide: >
+    La RAM. El plan planteaba D15 como decision de memoria -"con 8 GB y el
+    modelo cargado, mide RAM antes de subir"-, pero en NB04 el modelo no se
+    carga: los vectores vienen hechos de artifacts/embeddings/. A 3.072 bytes
+    por vector, el lote de 256 ronda el megabyte y la memoria no arbitra.
+  d15_aritmetica: >
+    El trabajo perdido ESPERADO no depende del lote: (15.000 / lote) x p x lote
+    = 15.000 x p. Con el lote pequeno cambian el peor caso por incidente y la
+    variabilidad, no el coste esperado. Con 128 son 118 peticiones frente a 235
+    con 64, y el mensaje queda muy por debajo del maximo de gRPC (4 MiB).
 
 nb03_representacion:
   # Se invierte el montaje de NB02: alli el texto estaba congelado y variaba el
@@ -325,5 +747,567 @@ nb03_representacion:
     El punto de la base vectorial sigue siendo `record_id` en relacion 1:1 con el
     producto: el esquema de NB04 se mantiene simple, la idempotencia no necesita borrar
     chunks huerfanos, el top-10 no necesita deduplicar por producto y la regla de
-    duplicados de NB08 compara producto contra producto. D08 (agregacion chunk->producto)
+    duplicados de NB07 compara producto contra producto. D08 (agregacion chunk->producto)
     queda sin aplicar.
+
+nb05_recuperacion:
+  # §3.3: "una interfaz comun que reciba una consulta y devuelva resultados
+  # normalizados". Las cuatro decisiones se toman ANTES de escribir el codigo.
+
+  # 1 · La forma del resultado.
+  forma_del_resultado: tipo_nuevo_que_hereda
+  forma_del_resultado_decision: >
+    Un tipo nuevo, pero que extienda del existente para reutilizar las
+    propiedades necesarias para devolverlo. Y para llevar la informacion de un
+    tipo a otro, tiene que haber un mapeo entre los dos objetos.
+  forma_consecuencia: >
+    `Resultado` hereda de `SearchResult`, asi que ES un SearchResult: evaluacion,
+    graficas y la tabla comparativa de NB09 lo aceptan sin convertir nada. El
+    mapeo que si hace falta esta en otra costura -del `SearchHit` del motor al
+    `Resultado`-, y es donde se saca `product_id` del payload. Sin ese campo no
+    se puede escribir resultados_busqueda.csv, asi que su ausencia es un error,
+    no un hueco.
+  forma_nota_tecnica: >
+    `SearchResult` es frozen y con slots, asi que `Resultado` tiene que serlo
+    tambien -Python no deja heredar entre frozen y no frozen- y todos sus campos
+    nuevos necesitan valor por defecto, porque el padre ya tiene uno.
+
+  # 2 · Coleccion vacia.
+  coleccion_vacia: lista_vacia
+  coleccion_vacia_decision: >
+    Lista vacia: a nivel de usuario, cuando busque, no le aparecera nada si no
+    se encuentra nada.
+  filtro_sin_resultados: lista_vacia   # no se decide: lo impone el enunciado
+
+  # 3 · Timeout de busqueda.
+  timeout_busqueda_s: 30
+  timeout_decision: >
+    30 segundos para la busqueda, y si se supera, una excepcion controlada. No
+    es el mismo caso que no haber encontrado resultados.
+  timeout_contraste: >
+    La busqueda medida sobre el indice de 15.000 tarda 22 ms, asi que el tope
+    esta 1.400 veces por encima de lo tipico. Eso lo hace muy seguro contra
+    falsos positivos -una primera consulta en frio no lo dispara nunca- a cambio
+    de que un usuario espere 30 s antes de enterarse de que el motor no esta.
+
+  # 4 · El filtro de color en la interfaz.
+  filtro_color_en_la_interfaz: no
+  filtro_color_decision: >
+    El color debe constar unicamente como filtro de busqueda, pero no es
+    requisito que se exponga a la interfaz (de momento).
+  filtro_color_consecuencia: >
+    Queda como capacidad del almacen -indice de texto declarado y probado en
+    NB04- sin puerta de entrada publica. Exponerlo mas adelante es anadir un
+    parametro, no rehacer el indice.
+
+nb06_ann:
+  # Objetivo del plan: separar el error del indice del error del modelo, y
+  # elegir el punto de operacion con una restriccion declarada ANTES de ver
+  # la curva recall-latencia.
+
+  # D16 · la restriccion de negocio, fijada antes de barrer `ef`.
+  d16_recall_ann_minimo: 0.90
+  d16_p95_maximo_ms: 20.0
+  d16_alcance: >
+    Opcion "permisivo" de las tres ofrecidas (equilibrado 0,95/50ms, estricto
+    0,98/100ms, permisivo 0,90/20ms). Se prioriza velocidad, asumiendo
+    que la comparacion nDCG@10 (oraculo vs ANN elegido) es la que dice si esa
+    perdida de recall le cuesta algo al negocio.
+  d16_por_que_fijarla_antes: >
+    Si se mira primero la curva y despues se dice "con esto me vale", la
+    restriccion deja de ser un criterio de decision: pasa a describir el
+    resultado en vez de juzgarlo. Mismo patron que D09b y D22.
+  d16_referencia: >
+    sesion_02 S7.2 usa exactamente este procedimiento (fijar umbral, descartar
+    lo que no llega, elegir lo mas barato entre lo que sobra) con recall>=0,95
+    como ejemplo, marcandolo explicitamente como "decision de producto y de
+    riesgo", no como recomendacion universal.
+
+  # D17 · alcance: no entra el laboratorio FAISS opcional (HNSW vs IVF vs IVF-PQ).
+  d17_laboratorio_faiss: no
+  d17_por_que: >
+    NB06 se limita al motor de entrega (Qdrant, R03): barrer `ef` y medir
+    recall/latencia/nDCG contra el oraculo exacto. Es lo que exige el
+    enunciado; comparar familias ANN queda fuera de alcance.
+
+  # m / ef_construct: se quedan en los valores por defecto de Qdrant -los que
+  # ya tiene el indice de NB04, porque QdrantStore.create_collection() no les
+  # paso hnsw_config-. No es una decision por omision: queda declarada y con
+  # la mejora futura anotada.
+  hnsw_m: 16
+  hnsw_ef_construct: 100
+  hnsw_m_ef_construct_decision: >
+    Tomemos m y ef_construct por defecto (aunque seria una buena mejora a
+    realizar en un futuro, el configurar m y ef_construct con diferentes
+    tamanos de colecciones para configurarlos), los cuales serian 16 y 100,
+    respectivamente.
+  hnsw_m_ef_construct_consecuencia: >
+    Cambiarlos exige una coleccion nueva al lado (HnswConfigDiff se declara al
+    crear); por eso el barrido de NB06 solo toca `ef` (hnsw_ef), que es un
+    parametro de consulta y no reconstruye nada.
+
+  # El barrido: HNSW por la tabla del plan.
+  valores_ef: [16, 32, 64, 128, 256]
+
+  # El oraculo exacto: se reutiliza `busqueda.DenseRetriever` (ya construido y
+  # probado en NB02, misma metrica coseno que la coleccion) en vez de traer
+  # FAISS o `SearchParams(exact=True)` de Qdrant. Cero dependencia nueva, cero
+  # riesgo de discordar metricas: son los mismos vectores que se ingirieron.
+  oraculo_via: dense_retriever_local
+
+  # R04 · RATIFICADA contra el Qdrant real (coleccion de NB04, 15.000 puntos).
+  r04_ef_elegido:
+    valor: 32
+    cumple_d16: true
+    medido:
+      recall_ann_at_10: 0.90
+      recall_ann_at_10_min: 0.00     # una sola consulta, la 18868, en 0
+      ms_p50: 7.04
+      ms_p95: 9.01
+      qps_estimado: 142.1
+    por_que: >
+      De las configuraciones que cumplen D16 (recall>=0,90 y p95<=20 ms: 32,
+      64, 128 y 256), 32 es la de menor p95 medido (9,01 ms) -el coste real,
+      no un supuesto de que mas ef siempre tarda mas-. Empata con el recall
+      minimo justo en el umbral (0,90), pero la comparacion de nDCG contra el
+      oraculo confirma que esa igualdad no esconde nada grave.
+    caso_duro_18868: >
+      La media de recall_ann_at_10 en ef=32 esconde que UNA consulta (18868,
+      "botines marrones mujer tacon medio") tiene recall 0 -no encuentra
+      ninguno de los 10 vecinos exactos-, mientras las otras 19 consultas del
+      barrido van bien. Se investigo si era un fallo estructural (bug de
+      normalizacion o de cache) o densidad de la region del espacio: se
+      descarto el bug comparando el vector de consulta cacheado por lote
+      (consultas_desarrollo) contra el cacheado suelto (consulta_suelta) para
+      ese texto exacto -identicos bit a bit, coseno 1,0-, y se confirmo
+      densidad reejecutando solo ef=128, donde la 18868 se recupera del todo
+      (10 de 10) y aparece OTRA consulta distinta como la mas dificil (una
+      silla ergonomica, 9 de 10). El problema no es de ef=32: es que esa
+      categoria (botines de mujer) tiene una region muy densa del catalogo.
+    ndcg_vs_oraculo: >
+      Sobre las 8 consultas de desarrollo (las que tienen qrels), el nDCG@10
+      agregado baja de 60,06 % (oraculo exacto) a 55,31 % (R04) -una caida de
+      4,75 puntos-. Por consulta (`comparar_ndcg_por_consulta`): la 18868 es
+      la UNICA que empeora, y lo hace del todo (45,0 % -> 0,0 %, -45 puntos);
+      las otras 6 con qrels no se mueven ni un punto (delta=0,0 %), y una
+      (33633, "disfraz halloween talla grande hombre") MEJORA +7,0 % -el ANN
+      trajo un sustituto mas relevante que el vecino exacto segun los juicios
+      reales-. La media de los 8 deltas, (-45+0+0+0+0+0+0+7)/8 = -4,75,
+      explica exactamente la caida agregada: el 100 % del coste de R04 en
+      nDCG lo paga una sola consulta.
+    ruido_medido_y_descartado: >
+      En una ejecucion del barrido completo, ef=64 registro un p95 anomalo
+      (32,29 ms, por encima incluso de ef=128 y ef=256, que exploran mas
+      candidatos). Se investigo -el ms_p50 tambien salio elevado (15,24 frente
+      a un ms_min=5,88), no era un unico pico- y se reprodujo aislando esa
+      configuracion sola (`valores_ef=[64]`): volvio a los ~8-12 ms
+      esperados. Conclusion: ruido del sistema durante ese tramo del barrido,
+      no una propiedad real de ef=64. No afecta a R04 porque ef=32 ya ganaba
+      por p95 antes de esa anomalia.
+    conclusion_para_el_informe: >
+      R04 (ef=32) es practicamente gratis salvo en un caso identificado
+      (18868): la densidad de esa categoria hace que el vecino exacto no
+      entre en el top-10 aproximado. No es "ef bajo no sirve" en general -6
+      de las 8 consultas de desarrollo van perfectas incluso con ef=32, y una
+      hasta mejora-: es un fallo localizado y explicado, no sistemico.
+
+nb08_mutaciones:
+  # 24 eventos en eventos_catalogo.csv: 8 actualizaciones (UPSERT, ya
+  # existian, catalog_version 1->2), 8 bajas (DELETE, active=False) y 8 altas
+  # nuevas (UPSERT, no existian, catalog_version=1, product_id "AURUM-NEW-*").
+  #
+  # Renumerado: este notebook era "07_mutaciones.ipynb" y paso a
+  # "08_mutaciones.ipynb" para que el numero del fichero coincida con el
+  # orden real de ejecucion (ver D19) -confirmado que el enunciado no exige
+  # un nombre de fichero concreto, asi que no hay riesgo de correccion-.
+
+  # D18 · estrategia de visibilidad.
+  d18_visibilidad: espera_activa_con_timeout
+  d18_alcance: >
+    La escritura ya es sincrona (`QdrantStore.upsert(..., wait=True)`, fijado
+    desde NB04). D18 anade una segunda espera, la de la LECTURA: la
+    verificacion por busqueda vectorial reintenta hasta un tope de tiempo y
+    falla con mensaje claro si el punto no aparece, en vez de asumir que
+    `wait=True` en la escritura basta para que el indice HNSW ya lo refleje.
+  d18_decision: >
+    Si, hagamos una espera activa.
+  d18_por_que: >
+    El enunciado (S4.1) pide que el sistema "sepa esperar, fallar o
+    informar" en las rutas de lectura, no solo en la escritura. NB04 midio
+    que el indice puede tardar varios segundos en reflejar una ingesta
+    grande; para un upsert pequeno es plausible que sea instantaneo, pero
+    D18 lo mide en vez de suponerlo.
+
+  # D19 · orden real de trabajo entre NB07 (duplicados) y NB08 (mutaciones).
+  d19_orden: nb07_antes_de_nb08
+  d19_hallazgo: >
+    7 de las 14 filas de altas_desarrollo.csv (las DEV-DUP-001..007) traen
+    `reference_product_id` que coincide exactamente con 7 de los 8
+    `product_id` que las actualizaciones EVT-001..008 de NB08 modifican
+    (solo EVT-007, el delantal infantil, no tiene alta que lo referencie).
+  d19_decision: >
+    Mejor no tentar a la suerte y hacer la prueba de duplicados frente al
+    catalogo real, antes de que eventos_catalogo lo module -aunque no tenga
+    por que pasar, es mas seguro no arriesgarse a perder la referencia
+    original con la que se diseno el examen de NB07.
+  d19_consecuencia: >
+    NB07 (duplicados) se ejecuta ANTES que NB08 (mutaciones), y desde el
+    renumerado el nombre del fichero ya coincide con ese orden real -antes
+    el examen de duplicados se llamaba "08_duplicados.ipynb" y corria
+    primero pese al numero; ahora "07_duplicados.ipynb" corre primero, sin
+    esa discordancia-. altas_desarrollo.csv nunca se inserta en el catalogo:
+    es examen (14 casos con respuesta conocida), no dato de produccion. Los
+    candidatos de NB07 salen de consultar la coleccion de Qdrant tal como
+    esta ahora, todavia sin las mutaciones de NB08.
+  d19_por_que_no_vale_cachear_aparte: >
+    El enunciado (S4.2) exige que "la base vectorial siga siendo el
+    mecanismo de generacion de candidatos" en la deteccion de duplicados: no
+    basta con recalcular en local contra los vectores cacheados, porque eso
+    dejaria de probar el motor de verdad. Por eso la unica forma de calibrar
+    contra el catalogo "de antes" es consultar Qdrant antes de que NB08 lo
+    mute, no evitar Qdrant.
+
+nb07_duplicados:
+  # Objetivo del plan: una regla reproducible para detectar altas
+  # potencialmente duplicadas, calibrada SOLO con las 14 altas de
+  # desarrollo, congelada antes de tocar altas_evaluacion.csv.
+
+  # D20 · senales que entran en la regla.
+  d20_senales:
+    - score_top1          # similitud del motor ANN, base de ambos caminos
+    - margen_top1_top2     # top1 - top2, Camino 1
+    - marca                # brand del payload, igualdad exacta, Camino 2
+    - color                # payload, igualdad de conjunto de palabras normalizado, Camino 2
+  d20_descartada: >
+    Similitud lexica de titulo (rapidfuzz/Jaccard de trigramas). Se decidio
+    no anadirla: el score_top1 (embedding semantico) ya deberia cubrir el
+    caso de titulos reordenados del enunciado, y anadir un cuarto parametro
+    continuo (umbral lexico) sobre solo 14 ejemplos de desarrollo subia el
+    riesgo de sobreajuste sin necesidad clara.
+  d20_limitacion_marca: >
+    El campo `text` codificado no es fiable para extraer la marca (ej.
+    DEV-DUP-001: brand="NIKE" en el payload pero el texto dice "Marca: ."),
+    por eso la senal usa el payload, no el texto. El propio payload tiene
+    un 4,4% de productos (658/15.000, verificado sobre catalogo_productos.csv)
+    sin `brand` -en esos casos el corroborador de marca no puede activarse
+    para ese candidato.
+  d20_limitacion_color: >
+    `color` esta vacio en el 37,4% del catalogo. La igualdad se calcula
+    sobre el conjunto de palabras normalizado (minusculas, sin acentos,
+    separado por comas/"y"/"/"), no por subcadena ni solapamiento parcial:
+    "Negro, Acero Inoxidable" y "Acero Inoxidable, Negro" coinciden (mismas
+    palabras, otro orden), pero "Negro y Blanco" NO coincide con "Negro"
+    (un color declarado de mas es informacion distinta, no la misma dicha
+    de otra forma).
+
+  # D21 · forma de la regla: dos caminos en OR.
+  d21_forma: >
+    Camino 1:  score_top1 >= umbral_texto_solo  AND  margen >= margen_minimo
+    Camino 2:  score_top1 >= umbral_texto_corroborado  AND  (marca coincide OR color coincide)
+    (umbral_texto_corroborado < umbral_texto_solo)
+  d21_por_que_dos_caminos: >
+    El color nunca debe bloquear un duplicado por si solo -por decision
+    explicita: "mismo pantalon, otra talla o color" puede contar como
+    duplicado-. El Camino 1 no depende de marca ni color. El Camino 2
+    corrobora los casos donde la similitud semantica sola no basta.
+  d21_por_que_or_no_and: >
+    Un AND entre marca y color exigiria que ambos campos esten presentes
+    Y coincidan a la vez; con 37,4% de color vacio y 4,4% de marca vacia,
+    eso bloquearia el Camino 2 en una fraccion no despreciable de
+    candidatos reales, en contra de D22 (priorizar recall). El OR es
+    ademas una decision consciente, no solo un parche por
+    datos faltantes: misma marca con distinto color ya debe corroborar
+    duplicado (es la misma variante de producto), no descartarlo.
+  d21_limitacion_camino_2: >
+    No calibrable con los 14 ejemplos de DESARROLLO: los 7 positivos son
+    reenvios casi literales (texto, marca y color identicos) que ya caen
+    en el Camino 1 con cualquier umbral_texto_solo razonable. Ningun ejemplo
+    activa el Camino 2 en solitario. umbral_texto_corroborado se fija por
+    criterio razonado, no por barrido, y se documenta como limitacion en el
+    informe: lo ideal
+    seria verificarlo con mas datos -de otro tipo, con casos de
+    corroboracion por marca/color sin texto casi identico-, pero no se
+    dispone de ellos.
+
+  # D22 · criterio del punto de operacion, fijado ANTES de ver la curva
+  # P/R/F1 -mismo patron que D09b y D16-.
+  d22_criterio: maximizar_recall_con_suelo_de_precision
+  d22_suelo: >
+    Maximo 2 falsos positivos sobre los 7 negativos de desarrollo. Si el
+    barrido alcanza recall=1.0 con eso, la precision en ese punto es
+    7/9 = 0,778. El suelo se expresa en cuenta de errores tolerados, no en
+    decimales: con solo 7 negativos cualquier cifra con dos decimales es
+    precision falsa -un solo ejemplo mal clasificado mueve la metrica
+    ~12-14 puntos-.
+  d22_por_que_recall: >
+    Los falsos negativos (duplicados no detectados) degradan el top-10 de
+    busqueda con variantes redundantes del mismo producto, desplazando
+    resultados buenos y distintos fuera del ranking -sin que exista un
+    proceso que reaudite el catalogo ya publicado, es un fallo silencioso
+    y persistente-. Un falso positivo, en cambio, se corrige en el acto
+    con una revision manual en el momento del alta.
+  d22_por_que_fijarlo_antes: >
+    Mismo patron que D09b y D16: si el suelo se elige despues de ver la
+    curva, deja de ser un criterio de decision y pasa a describir el
+    resultado en vez de juzgarlo.
+
+  # R05 · RATIFICADA contra el Qdrant real (coleccion de NB04, 15.000 puntos),
+  # sobre las 14 altas de desarrollo (7 positivos + 7 negativos).
+  r05_umbral_elegido:
+    umbral_texto_solo: 0.7366        # antes "tau_alto": Camino 1, sin corroboracion
+    margen_minimo: 0.1               # antes "delta": override manual, ver aviso_margen_minimo abajo
+    umbral_texto_corroborado: 0.6871 # antes "tau_bajo": Camino 2, con marca/color
+    margen_minimo_barrido: 0.0       # lo que devolvio el barrido antes del override
+    cumple_d22: true
+    medido:
+      precision: 1.0
+      recall: 1.0
+      f1: 1.0
+      fp: 0
+      combinaciones_evaluadas: 216
+      rango_barrido: "umbral_texto_solo/umbral_texto_corroborado en [0.588, 0.984], margen_minimo en [0, 0.348]"
+    por_que: >
+      De las 216 combinaciones del barrido (rango derivado del score_top1
+      observado en las 14 altas, no de un valor de libro), esta es la de
+      mayor recall con fp <= 2 (D22) -en este caso, separacion perfecta:
+      recall=1.0 con fp=0-. Umbrales tal cual los devuelve el barrido;
+      margen_minimo es la excepcion, ver aviso_margen_minimo.
+    aviso_margen_minimo: >
+      El barrido devolvio margen_minimo=0.0, pero no porque sea el mejor
+      valor: empata con cualquier otro candidato probado, porque las 7
+      altas positivas tienen `marca_coincide=True` y ya superan
+      `umbral_texto_corroborado` por si solas -el Camino 2 las atrapa sin
+      necesitar el margen-, y ningun ejemplo de desarrollo activa el
+      escenario denso (variantes de talla/color) que el margen esta
+      pensado para frenar (d21_limitacion_camino_2). El barrido eligio 0.0
+      por ser el primer candidato de un empate, no por merito propio.
+      Subir margen_minimo no cuesta nada medible en este dataset y anade
+      proteccion real, asi que se fija manualmente en 0.1 -decision
+      razonada, igual que umbral_texto_corroborado, no resultado del
+      barrido-: es el margen mas alto visto entre los 7 NEGATIVOS de
+      desarrollo (0,0577, DEV-NEW-001) redondeado al alza, el "ruido" que
+      existe aunque no haya ningun duplicado real. Se descarto 0.2 -mas
+      conservador, pero dejaria el Camino 1 dependiendo casi siempre del
+      Camino 2, salvo para DEV-DUP-005 (margen 0,3479)- para no perder de
+      vista que el margen debe seguir aportando algo por si solo. Si en
+      produccion aparecen falsos positivos por un margen demasiado
+      permisivo, este es el primer parametro a revisar.
+    aviso_separacion_perfecta: >
+      precision=recall=f1=1.0 es coherente con el propio dataset (D20/D21):
+      los 7 positivos son reenvios casi literales y los 7 negativos son
+      productos de categorias completamente distintas -no hay ni un caso
+      limitrofe en desarrollo-. No debe leerse como evidencia de que la regla
+      generaliza bien a los casos dificiles (variantes, parafrasis) que el
+      propio conjunto no contiene -esos siguen siendo la limitacion declarada
+      de d21_limitacion_camino_2-.
+    artefacto: >
+      Reejecutado con margen_minimo=0.1 (override aplicado): 7 de 14
+      marcadas como duplicado en resultados/resultados_duplicados.csv -el
+      mismo recuento que con margen_minimo=0.0-, confirmando que el
+      override no cambia el resultado sobre altas_evaluacion.csv, igual que
+      no cambiaba sobre desarrollo (Camino 2 sostiene el recall en ambos
+      conjuntos).
+
+# ---------------------------------------------------------------------------
+# NB09 no toma decisiones: las 22 (D01-D22, R01-R05) estaban cerradas al
+# llegar aqui. Todo lo que sigue es TRABAJO EXTRA de verificacion -pruebas
+# ejecutadas DESPUES de ver los resultados, para comprobar hipotesis y acotar
+# limitaciones-. Ninguna entrada de esta seccion cambia una decision vigente:
+# se registran medidas, con su evidencia, para una iteracion futura.
+# ---------------------------------------------------------------------------
+nb09_evaluacion:
+
+  correccion_de_medicion:
+    problema: >
+      El oraculo exacto se construia desde catalogo_productos.csv -el estado
+      previo a NB08- mientras que el indice ANN llevaba aplicados los 24
+      eventos del ciclo de vida. Ambos suman 15.000 puntos y no son los
+      mismos: 8 bajas y 8 altas de diferencia. Varias de esas altas responden
+      literalmente a consultas de desarrollo (AURUM-NEW-008 se titula "Base
+      tapizada 160 x 200 sin patas", que es la consulta 13357), asi que el
+      ANN las devolvia y la metrica perdidos_por_el_ann lo apuntaba como
+      perdida suya.
+    deteccion: >
+      Salio al comprobar por que subir ef no recuperaba ningun relevante
+      perdido. Es un defecto de la propia medicion, no una decision de diseno
+      ni de negocio.
+    correccion: >
+      Se recalculo el oraculo sobre el corpus post-NB08 para equipararlo al
+      indice (NB09 seccion G.1.c), replicando la semantica de Qdrant, que
+      indexa por record_id: -8 bajas, 8 reescrituras, +8 altas = 15.000, que
+      cuadra con el recuento del indice. Sin coste de API: los 16 vectores de
+      los UPSERT ya estaban cacheados desde NB08.
+    efecto_medido: >
+      La brecha oraculo->ANN en nDCG@10 cae de 0.1219 a 0.0475. El 61% de la
+      perdida atribuida al ANN era diferencia de corpus, no aproximacion.
+      Queda recogido como nota al pie de la fila C3 en
+      artifacts/tabla_comparativa.md, calculada en ejecucion.
+    corroboracion_independiente: >
+      La brecha corregida (0,0475) coincide exactamente con la que NB06 midio
+      antes de que existiera ninguna mutacion:
+      nb06_ann.r04_ef_elegido.ndcg_vs_oraculo registra 60,06% (oraculo) frente
+      a 55,31% (R04), una caida de 4,75 puntos. Las mutaciones de NB08 bajan
+      ambos niveles por igual -las altas no tienen juicio y por D04 puntuan 0,
+      desplazando relevantes juzgados tanto en el oraculo como en el ANN-, de
+      modo que la brecha se conserva. Que dos mediciones independientes,
+      separadas por tres notebooks y por 24 eventos de escritura, den el mismo
+      4,75 es la mejor prueba de que 0,1219 era el artefacto y 0,0475 el dato.
+    consecuencia: >
+      Se descarta la atribucion a capa indice de las consultas 13357 y 43240:
+      el ANN situa B00YMSZDZS y B08MQ42Z6P en el puesto 11, exactamente donde
+      los pone el oraculo corregido, y los pierde igual con ef 32, 64, 128 y
+      256 -si fuera aproximacion, ef=256 los recuperaria-.
+
+  mejoras_medidas_no_aplicadas:
+    ef_de_busqueda:
+      vigente: 32          # R04, sin cambios
+      medido_mejor: 128
+      ya_conocido_desde_nb06: >
+        Esto NO es un hallazgo nuevo: nb06_ann.r04_ef_elegido.caso_duro_18868
+        ya documento que la 18868 tiene recall 0 con ef=32 y se recupera del
+        todo con ef=128, y r04_ef_elegido.ndcg_vs_oraculo ya midio que esa
+        unica consulta paga el 100% del coste de R04 en nDCG (45,0% -> 0,0%).
+        R04 eligio ef=32 sabiendolo: de las cuatro configuraciones que
+        cumplen D16 (32, 64, 128 y 256), ef=32 era la de menor p95 medido.
+      lo_que_anade_nb09: >
+        Barrido de ef en {32, 64, 128, 256} repetido sobre el indice YA
+        MUTADO por NB08 (NB09 G.1.b), que es el estado real del sistema
+        entregado. Confirma que el diagnostico de NB06 se mantiene tras las
+        mutaciones: 0 de 3 relevantes con ef=32 y con ef=64, 3 de 3 con
+        ef=128 y ef=256, y con ef alto el ANN coincide exactamente con el
+        oraculo corregido (puestos 1, 2 y 10). Descarta ademas que el fallo
+        fuese consecuencia de los eventos del ciclo de vida.
+      causa: >
+        Densidad de la region, no escasez -la explicacion ya establecida en
+        NB06-: la categoria "botines de mujer" ocupa una zona muy poblada del
+        espacio, y explorando solo 32 candidatos el recorrido HNSW los
+        consume en vecinos proximos pero no optimos antes de llegar a los
+        verdaderos mas cercanos.
+      por_que_no_se_aplica: >
+        R04 se fijo antes de ver la curva y asi se deja. Se registra que el
+        p95 de ef=128 -12,36 ms en artifacts/benchmark_ann.csv- cabe dentro
+        del presupuesto de 20 ms de D16, de modo que aplicar ef=128 en una
+        iteracion futura no exigiria renegociar la restriccion de negocio:
+        solo cambiar el criterio de desempate que uso R04 -menor p95 entre
+        las admisibles- por uno que penalice el recall minimo por consulta y
+        no solo el agregado.
+    plantilla:
+      vigente: A4          # R01, sin cambios
+      medido_mejor: A3
+      evidencia: >
+        Rejilla {A4, A3, A0} x {768, 1536, 3072} en busqueda exacta (NB09
+        G.2.b), midiendo Jaccard@10 entre las tres formulaciones de cada
+        intencion. Para la intencion 93437: 0,333 con A4/768 y 0,818 con
+        A3/3072. A3 gana a A4 en las tres dimensiones y tambien en la media
+        de las 4 intenciones (0,512 frente a 0,375). Pesa mas la plantilla
+        que la dimension: subir solo la dimension (A4/3072) da 0,429, cambiar
+        solo la plantilla (A3/768) da 0,538. Cualitativamente, con A4 el
+        top-5 de la formulacion parafraseada trae una silla de ducha; con
+        A3/3072 los cinco son sillas de oficina.
+      por_que_no_se_aplica: >
+        R01 eligio A4 midiendo nDCG@10 sobre las 8 consultas de desarrollo,
+        todas de tipo directo; la robustez a la parafrasis no entro en esa
+        medicion y no puede decidirse ahora sin reabrirla. Cambiar de
+        plantilla obliga ademas a reingerir el indice completo, a diferencia
+        de ef, que es un parametro de consulta.
+
+  defecto_detectado_en_nb08:
+    descripcion: >
+      NB08 codifico los 16 UPSERT con la columna text cruda, sin pasar por la
+      plantilla A4. Irrelevante para las 8 altas (66-96 caracteres, por
+      debajo del corte de 936), pero 4 de las 8 actualizaciones lo superan
+      -hasta 2.676 caracteres- y quedaron indexadas sin recortar frente a los
+      otros 14.996 puntos de la coleccion.
+    estado: >
+      Detectado y documentado, no corregido. El oraculo corregido de G.1.c lo
+      reproduce a proposito: su trabajo es replicar lo que el indice contiene
+      de verdad, no lo que deberia contener -corregirlo ahi esconderia el
+      defecto en vez de medirlo-.
+
+  limitacion_del_juego_de_pruebas:
+    descripcion: >
+      Pooling bias en la consulta 33633 "disfraz halloween talla grande
+      hombre": el catalogo tiene 22 productos con "disfraz" y "hombre" en su
+      texto y ninguno entro en el pool de 16 juicios. El unico Exact es una
+      blusa de mujer (B07GSVQG2R) y uno de los Substitute es un disfraz
+      infantil de nina. Sus metricas miden la cobertura del etiquetado, no la
+      calidad del sistema.
+    como_abordarlo: >
+      Ampliar el pool juzgando disfraces masculinos reales del catalogo,
+      seleccionados DESDE el catalogo y no desde el top-10 del buscador: si
+      se etiqueta lo que el propio motor devuelve, las metricas suben por
+      construccion. Se descarta la alternativa de bajar el umbral de D01 para
+      incluir C -cambiaria todas las metricas ya calculadas y contaria un
+      sombrero de bruja como respuesta valida a una busqueda de disfraz de
+      hombre-.
+
+# ---------------------------------------------------------------------------
+# NB10 es el recorrido de entrega de principio a fin. Tampoco decide nada: lo
+# que sigue es un hallazgo medido durante su puesta a punto, y es evidencia
+# directa para D18 (la estrategia de visibilidad de NB08).
+# ---------------------------------------------------------------------------
+nb10_entrega:
+
+  el_recall_de_r04_sobre_consultas_nuevas:
+    sintoma: >
+      Ejecutando el recorrido completo, las consultas de la seccion C devolvian
+      resultados de otra categoria y con menos similitud: para "taladro sin
+      cable de 24 voltios que venga con su bateria" el top-1 era una estacion
+      de soldador con score 0,574, y para "algo para tapar la ventana y que no
+      entre luz por la manana" eran melatonina y un libro. El recuento era
+      correcto (15.000) y Qdrant reportaba estado verde.
+    como_se_descarto_lo_demas: >
+      (1) El catalogo SI contiene la respuesta -Einhell Taladro de impacto sin
+      cable, Black+Decker Taladro atornillador, DRFQSK Cortinas Opacas
+      Termicas, SIENOC Estor Opaco Blackout-, asi que no es cobertura.
+      (2) El vector de consulta es correcto: el que produce `codificar_consulta`
+      y el cacheado por lote en `consultas_evaluacion` tienen coseno 1,0.
+      (3) La coleccion es correcta: consultada despues con ese mismo vector y
+      el mismo ef=32 devuelve los taladros con los MISMOS scores que guardo
+      NB05 en artifacts/recuperacion.md (0,6431 · 0,6390 · 0,6292).
+      Lo unico que quedaba era el momento de la consulta.
+    por_que_parecia_intermitente: >
+      Mientras Qdrant no ha terminado de construir el HNSW, la busqueda cae en
+      fuerza bruta, que es EXACTA. Las primeras pasadas devolvian el resultado
+      correcto justamente porque el indice aun no estaba construido. Al anadir
+      una espera que garantiza que el indice SI esta construido, el resultado
+      empeoro -y eso es lo correcto: lo que se ve ahora es el comportamiento
+      real del sistema entregado, no un artefacto de haber consultado antes de
+      tiempo-.
+    medicion: >
+      Barrido de `ef` sobre las 3 consultas propias de NB10, midiendo recall
+      ANN@10 contra el oraculo exacto sobre los mismos 15.000 vectores:
+
+      PROPIA-1 "auriculares inalambricos con cancelacion de ruido"
+        ef=32: 0,9 · ef=64: 0,9 · ef=128: 0,9 · ef=256: 0,9
+      PROPIA-2 "algo para tapar la ventana y que no entre luz por la manana"
+        ef=32: 0,1 · ef=64: 0,1 · ef=128: 0,9 · ef=256: 0,9
+      PROPIA-3 "un regalo original para el amigo invisible"
+        ef=32: 0,7 · ef=64: 0,8 · ef=128: 1,0 · ef=256: 1,0
+
+      Con ef=32 la consulta de las cortinas recupera 1 de cada 10 vecinos
+      correctos y su top-1 es un soporte de aire acondicionado (0,5840); a
+      partir de ef=128 el top-1 pasa a ser el del oraculo exacto, DRFQSK
+      Cortinas Opacas Termicas (0,6042).
+    conclusion: >
+      No es un fallo nuevo: es el coste de R04 apareciendo sobre consultas que
+      no participaron en ninguna decision. nb06_ann.r04_ef_elegido ya registraba
+      `recall_ann_at_10_min: 0.0` y el caso_duro_18868 con el mismo umbral de
+      recuperacion, ef=128. Lo que anaden estas tres consultas es que el caso
+      duro NO era una rareza del conjunto de desarrollo: 2 de 3 consultas
+      escritas a mano se degradan con ef=32, una de ellas hasta recall 0,1, y
+      las tres convergen en el mismo ef=128 que ya habian senalado NB06 y NB09.
+    consecuencia_para_la_recomendacion: >
+      Refuerza lo que nb09_evaluacion.mejoras_medidas_no_aplicadas ya proponia:
+      el problema no es el valor de ef sino el CRITERIO que lo eligio -"menor
+      p95 entre las admisibles"-, que optimiza la latencia agregada mientras el
+      recall minimo por consulta se hunde a 0. Un criterio que mirara el peor
+      caso por consulta habria elegido ef=128, cuyo p95 (12,36 ms) sigue dentro
+      del presupuesto de 20 ms que fijo D16. R04 no se reabre en esta entrega.
+    lo_que_no_era: >
+      Se descarto por medicion, no por descarte: (1) no es cobertura -el
+      catalogo tiene las cortinas opacas y los taladros-; (2) no es el vector
+      de consulta -coseno 1,0 entre el que produce `codificar_consulta` y el
+      cacheado por lote-; (3) no es la coleccion -produccion y la de NB10 dan
+      el mismo resultado-; (4) no es el estado de indexacion -falla igual con
+      la coleccion completa y en verde-.

@@ -418,3 +418,163 @@ def plot_effect_vs_exposure(
         yaxis_title=effect,
         height=height,
     )
+
+
+def plot_ann_pareto(
+    barrido: pd.DataFrame,
+    *,
+    recall_minimo: float,
+    p95_maximo_ms: float,
+    recall_column: str,
+    latency_column: str = "ms_p95",
+    ef_column: str = "ef",
+    elegido_column: str = "elegido_r04",
+    title: str = "Fidelidad del ANN frente a latencia (NB06)",
+    subtitle: str | None = None,
+    height: int = 540,
+) -> go.Figure:
+    """La curva recall-latencia de NB06, con la región de D16 sombreada.
+
+    Cada punto es un `ef` del barrido; la línea los une en el orden en que se
+    barrieron para que se lea como una curva, no como una nube. La región
+    sombreada es exactamente la de D16 -`latencia <= p95_maximo` **y**
+    `recall >= recall_minimo`-, un solo rectángulo y no dos bandas cruzadas:
+    dibujar la restricción como intersección es lo que permite ver de un
+    vistazo si un punto la cumple sin leer la tabla.
+
+    El punto marcado con `elegido_column` (R04, ya decidido por
+    `ann.aplicar_restriccion`) sale en un color distinto: es la única forma de
+    ver *dentro* de la región cuál es el barato, porque varios `ef` pueden
+    cumplir D16 a la vez."""
+    faltan = {recall_column, latency_column, ef_column} - set(barrido.columns)
+    if faltan:
+        raise ValueError(f"Al barrido le faltan columnas: {sorted(faltan)}")
+    if barrido.empty:
+        raise ValueError("El barrido no tiene filas que dibujar.")
+    if recall_minimo < 0 or p95_maximo_ms < 0:
+        raise ValueError("recall_minimo y p95_maximo_ms no pueden ser negativos.")
+
+    datos = barrido.sort_values(ef_column).reset_index(drop=True)
+    elegido = (
+        datos[elegido_column].astype(bool)
+        if elegido_column in datos.columns
+        else pd.Series(False, index=datos.index)
+    )
+    colores = [ACCENT_COLOR if es_elegido else PRIMARY_COLOR for es_elegido in elegido]
+    tamanos = [16 if es_elegido else 10 for es_elegido in elegido]
+
+    x_max = float(max(datos[latency_column].max(), p95_maximo_ms) * 1.08)
+    y_min = float(min(datos[recall_column].min(), recall_minimo) * 0.97)
+
+    figure = go.Figure()
+    figure.add_shape(
+        type="rect",
+        x0=0, x1=p95_maximo_ms, y0=recall_minimo, y1=1.02,
+        fillcolor=BAND_COLOR, opacity=0.20, line_width=0, layer="below",
+    )
+    figure.add_trace(go.Scatter(
+        x=datos[latency_column],
+        y=datos[recall_column],
+        mode="lines+markers+text",
+        text=[str(valor) for valor in datos[ef_column]],
+        textposition="top center",
+        textfont={"size": 11, "color": MUTED_TEXT_COLOR},
+        line={"color": PRIMARY_COLOR, "width": 1.5},
+        marker={"size": tamanos, "color": colores, "line": {"width": 0}},
+        name="ef",
+        hovertemplate=(
+            f"ef=%{{text}}<br>{latency_column}: %{{x:.2f}} ms<br>"
+            f"{recall_column}: %{{y:.4f}}<extra></extra>"
+        ),
+    ))
+    figure.add_vline(
+        x=p95_maximo_ms, line_dash="dot", line_color=MUTED_TEXT_COLOR,
+        annotation_text=f"p95 ≤ {p95_maximo_ms:g} ms", annotation_position="top right",
+    )
+    figure.add_hline(
+        y=recall_minimo, line_dash="dot", line_color=MUTED_TEXT_COLOR,
+        annotation_text=f"recall ≥ {recall_minimo:g}", annotation_position="bottom right",
+    )
+    figure.update_xaxes(range=[0, x_max])
+    figure.update_yaxes(range=[y_min, 1.02])
+
+    return apply_project_layout(
+        figure,
+        title=title,
+        subtitle=subtitle,
+        xaxis_title=f"{latency_column} (ms) — menor es mejor",
+        yaxis_title=f"{recall_column} — mayor es mejor",
+        height=height,
+    )
+
+
+def plot_duplicate_threshold_sweep(
+    barrido: pd.DataFrame,
+    *,
+    max_fp: int,
+    precision_column: str = "precision",
+    recall_column: str = "recall",
+    cumple_column: str = "cumple_d22",
+    elegido_column: str = "elegido_r05",
+    hover_columns: tuple[str, ...] = (
+        "umbral_texto_solo", "margen_minimo", "umbral_texto_corroborado", "fp",
+    ),
+    title: str = "Precisión y recall del barrido de duplicados (NB07)",
+    subtitle: str | None = None,
+    height: int = 540,
+) -> go.Figure:
+    """El barrido de D22: cada punto es una combinación (umbral_texto_solo,
+    margen_minimo, umbral_texto_corroborado).
+
+    Mismo principio que `plot_ann_pareto`: enseñar el barrido completo, no
+    solo el veredicto. Los puntos que no cumplen el suelo de `max_fp`
+    falsos positivos se dibujan en rojo apagado en vez de descartarse -así
+    se ve también lo que no ganó-; los que cumplen, en azul; el elegido
+    (D22: mayor recall dentro del suelo) en ámbar y más grande."""
+    faltan = {precision_column, recall_column, cumple_column} - set(barrido.columns)
+    if faltan:
+        raise ValueError(f"Al barrido le faltan columnas: {sorted(faltan)}")
+    if barrido.empty:
+        raise ValueError("El barrido no tiene filas que dibujar.")
+
+    datos = barrido.reset_index(drop=True)
+    cumple = datos[cumple_column].astype(bool)
+    elegido = (
+        datos[elegido_column].astype(bool)
+        if elegido_column in datos.columns
+        else pd.Series(False, index=datos.index)
+    )
+    colores = [
+        ACCENT_COLOR if es_elegido else (PRIMARY_COLOR if es_cumple else NEGATIVE_COLOR)
+        for es_elegido, es_cumple in zip(elegido, cumple)
+    ]
+    tamanos = [16 if es_elegido else 9 for es_elegido in elegido]
+
+    presentes = [column for column in hover_columns if column in datos.columns]
+    extra = "".join(
+        f"<br>{column}: %{{customdata[{i}]}}" for i, column in enumerate(presentes)
+    )
+
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=datos[precision_column],
+        y=datos[recall_column],
+        mode="markers",
+        marker={"size": tamanos, "color": colores, "line": {"width": 0}},
+        customdata=datos[presentes].to_numpy() if presentes else None,
+        hovertemplate=(
+            f"precisión: %{{x:.3f}}<br>recall: %{{y:.3f}}{extra}<extra></extra>"
+        ),
+        showlegend=False,
+    ))
+    figure.update_xaxes(range=[0, 1.02])
+    figure.update_yaxes(range=[0, 1.02])
+
+    return apply_project_layout(
+        figure,
+        title=title,
+        subtitle=subtitle,
+        xaxis_title=f"precisión — rojo: más de {max_fp} falsos positivos",
+        yaxis_title="recall — ámbar: punto elegido (D22)",
+        height=height,
+    )

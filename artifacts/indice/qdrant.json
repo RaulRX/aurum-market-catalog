@@ -1,0 +1,109 @@
+{
+  "motor": "qdrant",
+  "pasos": [
+    {
+      "step": 1,
+      "name": "Colección con dimensión y métrica explícitas",
+      "expected": "dim=768, métrica=cosine",
+      "passed": true,
+      "action": "create_collection(dim=768, metric='cosine', recreate=False)",
+      "observed": "'aurum_catalogo__gemini_embedding_2__A4__768' lista (dim=768, métrica=cosine)",
+      "seconds": 1.369667500000105,
+      "detail": {}
+    },
+    {
+      "step": 2,
+      "name": "Ingesta por lotes",
+      "expected": "count() == 15000",
+      "passed": true,
+      "action": "upsert(15000 puntos, batch_size=128) → count()",
+      "observed": "count() = 15000 · 317.2 vectores/s en 47.3 s",
+      "seconds": 47.293493499999386,
+      "detail": {
+        "vectores_por_segundo": 317.2
+      }
+    },
+    {
+      "step": 3,
+      "name": "Índice al día antes de aceptar consultas",
+      "expected": "el motor declara su índice construido",
+      "passed": true,
+      "action": "index_ready() · espera con tope de 180 s",
+      "observed": "AÚN INDEXANDO al terminar la ingesta · listo tras 4.1 s de espera (3 sondeos)",
+      "seconds": 4.1385473000000275,
+      "detail": {
+        "index_ready": true,
+        "listo_al_terminar_la_ingesta": false,
+        "segundos_de_espera": 4.1
+      }
+    },
+    {
+      "step": 4,
+      "name": "Dimensión declarada == dimensión real",
+      "expected": "la colección dice 768",
+      "passed": true,
+      "action": "collection_dim()",
+      "observed": "la colección declara 768",
+      "seconds": null,
+      "detail": {
+        "dim_declarada": 768
+      }
+    },
+    {
+      "step": 5,
+      "name": "Ingesta repetida sin duplicar",
+      "expected": "count() sigue en 15000",
+      "passed": true,
+      "action": "upsert(LOS MISMOS 15000 puntos) → count()",
+      "observed": "count() = 15000",
+      "seconds": 70.76056189999963,
+      "detail": {}
+    },
+    {
+      "step": 6,
+      "name": "Canarios: cada punto se recupera a sí mismo",
+      "expected": "los 3 vuelven en la posición 1",
+      "passed": true,
+      "action": "search(vector del propio punto, top_k=10) × 3",
+      "observed": "3/3 en la posición 1",
+      "seconds": null,
+      "detail": {
+        "canarios": [
+          {
+            "record_id": "e1a0e559-6a49-5be5-b617-ec8a4899e975",
+            "posicion": 1
+          },
+          {
+            "record_id": "e89bbc67-b896-5fd3-9d1d-0049f561a914",
+            "posicion": 1
+          },
+          {
+            "record_id": "7cac59bd-1118-5b88-b2f8-504cec61b4e3",
+            "posicion": 1
+          }
+        ]
+      }
+    },
+    {
+      "step": 7,
+      "name": "Persistencia tras reinicio",
+      "expected": "mismo count() y los mismos canarios en la posición 1",
+      "passed": true,
+      "action": "make motor-down MOTOR=qdrant && make motor-up MOTOR=qdrant  (+ relectura)",
+      "observed": "✅ idéntico — count() 15000 y los mismos 10 ids en el mismo orden",
+      "seconds": null,
+      "detail": {}
+    },
+    {
+      "step": 8,
+      "name": "Recursos con el índice completo",
+      "expected": "RAM del contenedor y tamaño del volumen, esta vez sobre volumen limpio",
+      "passed": true,
+      "action": "make motor-stats  (con el motor vivo y los 15.000 ingeridos)",
+      "observed": "RAM 106.6 MiB en 1 contenedor · volumen 289.5 MB (no comparable entre motores) · dentro del `mem_limit` declarado, el más apretado aurum-market-qdrant al 5% · foto con el contenedor «Up 4 minutes (healthy)»",
+      "seconds": null,
+      "detail": {}
+    }
+  ],
+  "filtros": null
+}

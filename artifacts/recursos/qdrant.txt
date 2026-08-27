@@ -1,0 +1,9 @@
+docker stats --no-stream
+CONTAINER ID   NAME                  CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O         PIDS
+f63fc7b3dc01   aurum-market-qdrant   4.57%     36.39MiB / 2GiB     1.78%     10.4MB / 38.3kB   99.7MB / 24.1MB   23
+
+--- volumenes ---
+docker system df -v | grep aurum-market || true
+f63fc7b3dc01   qdrant/qdrant:v1.18.2                                  "./entrypoint.sh"        1               24.6kB    6 minutes ago   Up 6 minutes (healthy)      aurum-market-qdrant
+aurum-market-qdrant-data                                           1         293.8MB
+TOTAL VOL. = 293.8MB

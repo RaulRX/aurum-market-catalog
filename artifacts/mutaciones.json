@@ -1,0 +1,405 @@
+{
+  "coleccion": "aurum_catalogo__gemini_embedding_2__A4__768",
+  "recuento": {
+    "antes": 15000,
+    "despues_1a_pasada": 15000,
+    "despues_2a_pasada": 15000,
+    "despues_fuera_de_orden": 15000,
+    "idempotente": true,
+    "muestra_idempotencia": [
+      {
+        "tipo": "alta",
+        "existe_antes": true,
+        "catalog_version_antes": 1.0,
+        "title_antes": "Taladro inalámbrico compacto 24 V con dos baterías",
+        "existe_despues": true,
+        "catalog_version_despues": 1.0,
+        "title_despues": "Taladro inalámbrico compacto 24 V con dos baterías",
+        "identico": true
+      },
+      {
+        "tipo": "actualizacion",
+        "existe_antes": true,
+        "catalog_version_antes": 2.0,
+        "title_antes": "NIKE Legasee Legging Swoosh Pantalones Deportivos, Mujer, Negro (Black/White 011), S - ficha revisada",
+        "existe_despues": true,
+        "catalog_version_despues": 2.0,
+        "title_despues": "NIKE Legasee Legging Swoosh Pantalones Deportivos, Mujer, Negro (Black/White 011), S - ficha revisada",
+        "identico": true
+      },
+      {
+        "tipo": "baja",
+        "existe_antes": false,
+        "catalog_version_antes": null,
+        "title_antes": null,
+        "existe_despues": false,
+        "catalog_version_despues": null,
+        "title_despues": null,
+        "identico": true
+      }
+    ]
+  },
+  "titulos_actualizados_ok": 8,
+  "eventos": [
+    {
+      "event_id": "EVT-001",
+      "product_id": "B000G3T55M",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.003608400000302936,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.010983000000123866,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-002",
+      "product_id": "B07NV4L2W5",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0043851000009453855,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.006329800000457908,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-003",
+      "product_id": "B00BEFAR80",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.004547799999272684,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.007238700000016252,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-004",
+      "product_id": "B076HKFZ8N",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0021553000005951617,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.008100900000499678,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-005",
+      "product_id": "B07JYHSK27",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.00330980000035197,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.006040100000973325,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-006",
+      "product_id": "B07N379P73",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.00246309999965888,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.009407999999893946,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-007",
+      "product_id": "B08JCQP3JW",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0022028999992471654,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.008473699999740347,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-008",
+      "product_id": "B077FZDNJ2",
+      "tipo": "actualizacion",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.004755500000101165,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.006433500000639469,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-009",
+      "product_id": "B081JP8CC6",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.001971199999388773,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.009964700000637094,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-010",
+      "product_id": "B07GWRF23V",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0019959999990533106,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.007639399998879526,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-011",
+      "product_id": "B07XZBXCNB",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.004387900000438094,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.005888000001505134,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-012",
+      "product_id": "B07S7B3SN2",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.001880600000731647,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.010315899999113753,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-013",
+      "product_id": "8417441271",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0018000000000029104,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.005611700000372366,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-014",
+      "product_id": "B00JOH9FRO",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.003616899999542511,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.00743010000041977,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-015",
+      "product_id": "B07RL2XB4V",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0018447000002197456,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.0077081999988877214,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-016",
+      "product_id": "B01JADTEKE",
+      "tipo": "baja",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.006306299999778275,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.0058613999990484444,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-017",
+      "product_id": "AURUM-NEW-001",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.004076600000189501,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.008330599999680999,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-018",
+      "product_id": "AURUM-NEW-002",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.002652200000738958,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.009741199999552919,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-019",
+      "product_id": "AURUM-NEW-003",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.003053999998883228,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.005886299999474431,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-020",
+      "product_id": "AURUM-NEW-004",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.004530700000032084,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.008456499999738298,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-021",
+      "product_id": "AURUM-NEW-005",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.00247269999999844,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.009465999999520136,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-022",
+      "product_id": "AURUM-NEW-006",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.002638699999806704,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.0059053000004496425,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-023",
+      "product_id": "AURUM-NEW-007",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0038705999995727325,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.00787520000085351,
+        "intentos": 1
+      }
+    },
+    {
+      "event_id": "EVT-024",
+      "product_id": "AURUM-NEW-008",
+      "tipo": "alta",
+      "por_id": {
+        "visible": true,
+        "segundos": 0.0026759000011225,
+        "intentos": 1
+      },
+      "por_busqueda": {
+        "visible": true,
+        "segundos": 0.009044599999469938,
+        "intentos": 1
+      }
+    }
+  ]
+}

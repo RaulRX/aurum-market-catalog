@@ -110,7 +110,7 @@ def token_lengths(texts: Iterable[object], tokenizer: Tokenizer) -> NDArray[np.i
 
     Los valores nulos cuentan como 0 tokens en lugar de romper la medición: en
     el catálogo `text` no tiene vacíos, pero los eventos DELETE sí llegan con
-    campos vacíos (NB07)."""
+    campos vacíos (NB08)."""
     lengths = [
         0 if pd.isna(text) else len(tokenizer.encode(str(text))) for text in texts
     ]
@@ -415,7 +415,7 @@ class SentenceTransformerEncoder:
         if self._tasks is not None and set(self._tasks) != set(KINDS):
             raise ValueError(f"tasks debe cubrir exactamente {KINDS}")
 
-        if model is None:
+        def cargar() -> Any:
             # Import perezoso: `sentence_transformers` arrastra torch entero, y
             # medir longitudes en tokens no debería pagar ese arranque.
             from sentence_transformers import SentenceTransformer
@@ -423,18 +423,34 @@ class SentenceTransformerEncoder:
             if trust_remote_code:
                 _enable_transformers_v4_remote_code()
 
-            model = SentenceTransformer(
+            return SentenceTransformer(
                 repo_id,
                 trust_remote_code=trust_remote_code,
                 device=device,
                 token=token,
             )
+
+        self._cargar = cargar
         self._model = model
-        self.native_dim = int(
-            native_dim
-            if native_dim is not None
-            else self._model.get_sentence_embedding_dimension()
-        )
+        # Los pesos se cargan en el primer `encode`, no aquí. Construir el
+        # encoder de un modelo cuyos vectores ya están todos en caché no puede
+        # costar 2,3 GB de RAM y varios minutos para no llegar a usarlo: es
+        # exactamente lo que ocurre al re-ejecutar el notebook. La excepción es
+        # no declarar `native_dim`, porque entonces el único que sabe la
+        # dimensión es el propio modelo y hay que abrirlo.
+        if native_dim is not None:
+            self.native_dim = int(native_dim)
+        else:
+            if self._model is None:
+                self._model = cargar()
+            self.native_dim = int(self._model.get_sentence_embedding_dimension())
+
+    @property
+    def model(self) -> Any:
+        """Los pesos, cargados la primera vez que hacen falta de verdad."""
+        if self._model is None:
+            self._model = self._cargar()
+        return self._model
 
     @property
     def has_contract(self) -> bool:
@@ -461,7 +477,7 @@ class SentenceTransformerEncoder:
         if contract == "nativo" and self._tasks is not None:
             kwargs[self._task_arg] = self._tasks[kind]
 
-        vectors = self._model.encode(
+        vectors = self.model.encode(
             materialized,
             batch_size=batch_size,
             convert_to_numpy=True,
@@ -733,3 +749,180 @@ def encode_corpus(
             json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8"
         )
     return EncodedCorpus(vectors=vectors, stats=stats, metadata=metadata)
+
+
+# ─────────────── Coste, latencia y deriva: el encoder en producción ──────────
+#
+# `EncodingStats` mide el coste de *indexar*: un lote grande, una vez. Lo que
+# sigue mide el coste de *buscar*: una consulta suelta, en cada búsqueda y para
+# siempre. Son dos regímenes distintos y el segundo no se deduce del primero —
+# un lote de 8 consultas amortiza el viaje de red entre las ocho y esconde
+# justo lo que domina la latencia online.
+
+
+def measure_encode_latency(
+    encoder: Encoder,
+    texts: Sequence[str],
+    *,
+    kind: str = "query",
+    contract: str = "nativo",
+    repeticiones: int = 20,
+    calentamiento: int = 2,
+) -> dict[str, object]:
+    """Latencia de codificar **una** consulta, con calentamiento y repeticiones.
+
+    Codifica de una en una a propósito: es lo que hace el buscador cuando llega
+    una consulta de usuario. Las repeticiones recorren `texts` en ciclo para que
+    ni la longitud de un texto concreto ni una caché del proveedor dominen la
+    medición.
+
+    El calentamiento no se contabiliza: la primera llamada paga el
+    establecimiento de la conexión TLS en los modelos por API y, en los locales,
+    la carga perezosa de los pesos más la reserva de memoria. Nada de eso se
+    repite en cada consulta, así que contarlo mediría el arranque del proceso y
+    no el coste de buscar.
+    """
+    _validate_kind(kind)
+    _validate_contract(contract)
+    materialized = _materialize(texts)
+    if not materialized:
+        raise ValueError("No hay textos con los que medir.")
+    if repeticiones < 1:
+        raise ValueError("repeticiones debe ser >= 1.")
+
+    for indice in range(max(0, calentamiento)):
+        encoder.encode(
+            [materialized[indice % len(materialized)]], kind=kind, contract=contract
+        )
+
+    muestras: list[float] = []
+    for indice in range(repeticiones):
+        texto = materialized[indice % len(materialized)]
+        inicio = time.perf_counter()
+        encoder.encode([texto], kind=kind, contract=contract)
+        muestras.append((time.perf_counter() - inicio) * 1000)
+
+    tiempos = np.asarray(muestras, dtype=np.float64)
+    return {
+        "modelo": encoder.model_id,
+        "kind": kind,
+        "contrato": contract,
+        "n_llamadas": int(repeticiones),
+        "ms_p50": round(float(np.percentile(tiempos, 50)), 2),
+        "ms_p95": round(float(np.percentile(tiempos, 95)), 2),
+        "ms_media": round(float(tiempos.mean()), 2),
+        "ms_min": round(float(tiempos.min()), 2),
+        "ms_max": round(float(tiempos.max()), 2),
+    }
+
+
+def api_cost(n_tokens: float, *, precio_por_millon: float) -> float:
+    """Coste en dólares de codificar `n_tokens` con un modelo de pago por token."""
+    if n_tokens < 0 or precio_por_millon < 0:
+        raise ValueError("Ni los tokens ni el precio pueden ser negativos.")
+    return n_tokens * precio_por_millon / 1_000_000
+
+
+def api_cost_report(
+    *,
+    tokens_indexacion: float,
+    tokens_por_consulta: float,
+    precio_por_millon: float,
+    consultas_mes: int | None = None,
+) -> dict[str, float]:
+    """Coste de indexar una vez frente al coste de buscar siempre.
+
+    La cifra por consulta suelta es tan pequeña que no dice nada, así que el
+    informe la da también por cada mil consultas y, sobre todo, traduce la
+    reindexación completa a **cuántas consultas cuesta lo mismo**: ese número sí
+    ordena las dos partidas y no depende de la escala del negocio.
+
+    Cada clave lleva su unidad en el nombre, y no es manía de nomenclatura: una
+    tabla de costes en la que hay dólares, consultas y ratios mezclados se lee
+    mal si hay que deducir de cuál es cada columna.
+
+    | Clave | Unidad | Qué es |
+    |---|---|---|
+    | `indexacion_completa_usd` | USD | codificar el catálogo entero, una vez |
+    | `por_consulta_usd` | USD | codificar **una** consulta de usuario |
+    | `por_1000_consultas_usd` | USD | lo mismo × 1.000, para que se lea |
+    | `consultas_equivalentes_a_reindexar` | consultas | cuántas búsquedas cuestan lo que una reindexación |
+    | `mes_consultas_usd` | USD/mes | solo si se pasa `consultas_mes` |
+    """
+    indexacion = api_cost(tokens_indexacion, precio_por_millon=precio_por_millon)
+    por_consulta = api_cost(tokens_por_consulta, precio_por_millon=precio_por_millon)
+
+    reporte = {
+        "indexacion_completa_usd": round(indexacion, 4),
+        "por_consulta_usd": round(por_consulta, 8),
+        "por_1000_consultas_usd": round(por_consulta * 1000, 4),
+        "consultas_equivalentes_a_reindexar": (
+            round(indexacion / por_consulta) if por_consulta > 0 else float("inf")
+        ),
+    }
+    if consultas_mes is not None:
+        reporte["mes_consultas_usd"] = round(por_consulta * consultas_mes, 2)
+    return reporte
+
+
+def drift_check(
+    encoder: Encoder,
+    texts: Sequence[str],
+    reference: NDArray[Any],
+    *,
+    kind: str = "document",
+    contract: str = "nativo",
+    tolerancia: float = 1e-3,
+) -> dict[str, object]:
+    """¿El modelo sigue produciendo los mismos vectores que cuando se indexó?
+
+    Existe por una asimetría entre los dos regímenes de modelo. Con pesos
+    locales, la versión la fija el fichero: si no se descarga otro, el vector de
+    hoy es el de ayer. Con un modelo servido por API, el proveedor puede
+    actualizarlo bajo el mismo identificador, y entonces las altas que se
+    codifiquen después dejan de vivir en el mismo espacio que el catálogo ya
+    indexado. **Eso no lanza ninguna excepción**: los vecinos simplemente
+    empeoran, y sin una comprobación como esta el síntoma se confunde con una
+    mala representación.
+
+    Recodifica un puñado de textos ya indexados y los compara con sus vectores
+    guardados. Con vectores unitarios, coseno ≈ 1 significa que el modelo no ha
+    cambiado; cualquier desviación por encima de `tolerancia` es una señal para
+    reindexar antes de seguir escribiendo en el índice.
+    """
+    materialized = _materialize(texts)
+    referencia = np.asarray(reference, dtype=np.float32)
+    if referencia.ndim != 2 or referencia.shape[0] != len(materialized):
+        raise ValueError(
+            f"Hacen falta {len(materialized)} vectores de referencia, "
+            f"llegaron {referencia.shape}."
+        )
+
+    actuales = encoder.encode(materialized, kind=kind, contract=contract)
+    if actuales.shape[1] != referencia.shape[1]:
+        # Cambio de dimensión nativa: es deriva, y de la peor, pero el coseno no
+        # llega ni a calcularse. Se informa en vez de reventar con un error de
+        # álgebra que no diría qué ha pasado.
+        return {
+            "modelo": encoder.model_id,
+            "n_textos": len(materialized),
+            "sin_deriva": False,
+            "motivo": (
+                f"la dimensión nativa cambió de {referencia.shape[1]} a "
+                f"{actuales.shape[1]}"
+            ),
+        }
+
+    cosenos = np.sum(
+        safe_l2_normalize(actuales) * safe_l2_normalize(referencia), axis=1
+    )
+    desviados = int(np.sum(cosenos < 1.0 - tolerancia))
+    return {
+        "modelo": encoder.model_id,
+        "n_textos": len(materialized),
+        "coseno_min": round(float(cosenos.min()), 6),
+        "coseno_medio": round(float(cosenos.mean()), 6),
+        "n_desviados": desviados,
+        "tolerancia": tolerancia,
+        "sin_deriva": desviados == 0,
+    }

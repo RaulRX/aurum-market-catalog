@@ -1,0 +1,215 @@
+{
+  "motor": "milvus",
+  "pasos": [
+    {
+      "step": 1,
+      "name": "Crear colección",
+      "expected": "dim=768, métrica=cosine",
+      "passed": true,
+      "action": "create_collection(dim=768, metric='cosine', recreate=True)",
+      "observed": "creada (dim=768, métrica=cosine)",
+      "seconds": 3.66389520000007,
+      "detail": {}
+    },
+    {
+      "step": 2,
+      "name": "Ingesta por lotes",
+      "expected": "count() == 1500",
+      "passed": true,
+      "action": "upsert(1500 puntos, batch_size=128) → count()",
+      "observed": "count() = 1500",
+      "seconds": 2.6414963999999372,
+      "detail": {
+        "vectores_por_segundo": 567.9
+      }
+    },
+    {
+      "step": 3,
+      "name": "Ingesta repetida + índice listo",
+      "expected": "count() sigue en 1500 y el índice está al día",
+      "passed": true,
+      "action": "upsert(LOS MISMOS 1500 puntos, batch_size=128) → count() + index_ready()",
+      "observed": "count() = 1500 · índice: no lo reporta el motor",
+      "seconds": 9.683228800000052,
+      "detail": {
+        "index_ready": null
+      }
+    },
+    {
+      "step": 4,
+      "name": "Búsqueda global",
+      "expected": "10 resultados, con posición y score tipado",
+      "passed": true,
+      "action": "search(vector[768], top_k=10, filters=[])  · sin filtro",
+      "observed": "10 resultados · score: similarity (mayor es mejor)",
+      "seconds": 0.03608539999993354,
+      "detail": {
+        "top_1": "2a5aa063-7d33-5243-9ec2-3687ace89a66",
+        "score_kind": "similarity",
+        "higher_is_better": true
+      }
+    },
+    {
+      "step": 5,
+      "name": "Filtro nativo",
+      "expected": "brand equals 'einhell'",
+      "passed": true,
+      "action": "search(vector[768], top_k=10, filters=[brand equals 'einhell'])  → el motor filtra por brand_normalized",
+      "observed": "1 resultados, 1 cumplen · auditado contra brand_normalized = einhell",
+      "seconds": 0.08755429999996522,
+      "detail": {
+        "claves_auditadas": {
+          "brand": "brand_normalized"
+        },
+        "valores_devueltos": {
+          "brand": [
+            "einhell"
+          ]
+        }
+      }
+    },
+    {
+      "step": 6,
+      "name": "Lectura por record_id",
+      "expected": "devuelve 000bd6e8-a995-56d0-ba03-559885ccef39",
+      "passed": true,
+      "action": "get('000bd6e8-a995-56d0-ba03-559885ccef39')",
+      "observed": "encontrado · payload con 8 claves",
+      "seconds": 0.013869999999997162,
+      "detail": {}
+    },
+    {
+      "step": 7,
+      "name": "Borrado",
+      "expected": "000bd6e8-a995-56d0-ba03-559885ccef39 desaparece y count() baja a 1499",
+      "passed": true,
+      "action": "delete('000bd6e8-a995-56d0-ba03-559885ccef39') → get(mismo id) → count()",
+      "observed": "borrado, count() = 1499",
+      "seconds": 11.550852100000043,
+      "detail": {}
+    },
+    {
+      "step": 8,
+      "name": "Persistencia tras reinicio",
+      "expected": "mismo count() y mismos ids en el top-10 que antes del reinicio",
+      "passed": true,
+      "action": "make motor-down MOTOR=… && make motor-up MOTOR=…  (+ celda de solo lectura)",
+      "observed": "✅ idéntico — count() 1499 y los mismos 10 ids en el mismo orden",
+      "seconds": null,
+      "detail": {}
+    },
+    {
+      "step": 9,
+      "name": "Calidad del error con el motor apagado",
+      "expected": "excepción tipada y legible, no un error genérico",
+      "passed": true,
+      "action": "docker compose -f docker/…/compose.yaml stop  →  search()",
+      "observed": "✅ tipada por el SDK — pymilvus.exceptions.MilvusException: <MilvusException: (code=2, message=Fail connecting to server on localhost:19530, illegal connection params or server unavailable)>",
+      "seconds": null,
+      "detail": {}
+    },
+    {
+      "step": 10,
+      "name": "Recursos",
+      "expected": "RAM del contenedor · tamaño del volumen",
+      "passed": true,
+      "action": "make motor-stats  (con el motor vivo y ya ingerido)",
+      "observed": "RAM 530.8 MiB en 3 contenedores, el mayor aurum-market-milvus-minio · volumen 182.9 MB (no comparable entre motores) · dentro del `mem_limit` declarado, el más apretado aurum-market-milvus-minio al 50% · foto con el contenedor «Up 2 minutes (healthy)»",
+      "seconds": null,
+      "detail": {}
+    }
+  ],
+  "filtros": [
+    {
+      "caso": "FILTER-001",
+      "papel": "obligatorio",
+      "filtro": "brand equals 'einhell'",
+      "n_en_catalogo": 1,
+      "n_resultados": 1,
+      "cumplen": 1,
+      "todos_cumplen": true,
+      "veredicto": "✅ coincide con el catálogo (1, topado en 10)",
+      "clave_auditada": "brand_normalized",
+      "valores": "einhell",
+      "como_se_lee": "'herramienta inalámbrica para perforar' — la marca no aparece en el texto"
+    },
+    {
+      "caso": "FILTER-002",
+      "papel": "obligatorio",
+      "filtro": "brand equals 'apple'",
+      "n_en_catalogo": 0,
+      "n_resultados": 0,
+      "cumplen": 0,
+      "todos_cumplen": false,
+      "veredicto": "✅ ausencia real — el catálogo tampoco tiene ninguno",
+      "clave_auditada": "brand_normalized",
+      "valores": "(ninguno)",
+      "como_se_lee": "'tableta ligera para estudiar y tomar apuntes' — la marca no aparece en el texto"
+    },
+    {
+      "caso": "FILTER-003",
+      "papel": "obligatorio",
+      "filtro": "brand equals 'nike'",
+      "n_en_catalogo": 6,
+      "n_resultados": 6,
+      "cumplen": 6,
+      "todos_cumplen": true,
+      "veredicto": "✅ coincide con el catálogo (6, topado en 10)",
+      "clave_auditada": "brand_normalized",
+      "valores": "nike",
+      "como_se_lee": "'zapatillas cómodas para salir a correr' — la marca no aparece en el texto"
+    },
+    {
+      "caso": "FILTER-004",
+      "papel": "obligatorio",
+      "filtro": "brand equals 'samsung'",
+      "n_en_catalogo": 5,
+      "n_resultados": 5,
+      "cumplen": 5,
+      "todos_cumplen": true,
+      "veredicto": "✅ coincide con el catálogo (5, topado en 10)",
+      "clave_auditada": "brand_normalized",
+      "valores": "samsung",
+      "como_se_lee": "'monitor para trabajar con varias ventanas' — la marca no aparece en el texto"
+    },
+    {
+      "caso": "color · igualdad",
+      "papel": "referencia",
+      "filtro": "color equals 'negro'",
+      "n_en_catalogo": 164,
+      "n_resultados": 10,
+      "cumplen": 10,
+      "todos_cumplen": true,
+      "veredicto": "✅ coincide con el catálogo (164, topado en 10)",
+      "clave_auditada": "color_normalized",
+      "valores": "negro",
+      "como_se_lee": "referencia: cuántos casan con el valor entero"
+    },
+    {
+      "caso": "color · contiene palabra",
+      "papel": "palabra",
+      "filtro": "color contains 'negro'",
+      "n_en_catalogo": 215,
+      "n_resultados": 10,
+      "cumplen": 10,
+      "todos_cumplen": true,
+      "veredicto": "✅ coincide con el catálogo (215, topado en 10)",
+      "clave_auditada": "color_normalized",
+      "valores": "naranja y negro, naranja/negro, negro",
+      "como_se_lee": "si supera a la igualdad, alcanza los compuestos de B.1"
+    },
+    {
+      "caso": "color · contiene fragmento",
+      "papel": "fragmento",
+      "filtro": "color contains 'negr'",
+      "n_en_catalogo": 218,
+      "n_resultados": 10,
+      "cumplen": 10,
+      "todos_cumplen": true,
+      "veredicto": "✅ 10 de 218 — encuentra el fragmento ⇒ subcadena literal (nivel 3)",
+      "clave_auditada": "color_normalized",
+      "valores": "naranja y negro, naranja/negro, negro",
+      "como_se_lee": "0 ⇒ por palabras (nivel 2) · >0 ⇒ subcadena literal (nivel 3)"
+    }
+  ]
+}

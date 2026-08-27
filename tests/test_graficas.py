@@ -12,7 +12,9 @@ import pytest
 
 from aurum.graficas import (
     apply_project_layout,
+    plot_ann_pareto,
     plot_contract_delta,
+    plot_duplicate_threshold_sweep,
     plot_effect_vs_exposure,
     plot_dimension_curve,
     plot_metric_comparison,
@@ -253,3 +255,132 @@ def test_la_banda_marca_la_zona_indistinguible(exposicion):
 def test_avisa_si_falta_la_columna_de_exposicion(exposicion):
     with pytest.raises(ValueError, match="faltan columnas"):
         plot_effect_vs_exposure(exposicion, exposure="no_existe")
+
+
+# ─────────────────────────────── plot_ann_pareto ──────────────────────────────
+
+
+@pytest.fixture
+def barrido_ann() -> pd.DataFrame:
+    return pd.DataFrame([
+        {"ef": 16, "recall_ann_at_10": 0.88, "ms_p95": 5.0, "elegido_r04": False},
+        {"ef": 32, "recall_ann_at_10": 0.95, "ms_p95": 7.0, "elegido_r04": True},
+        {"ef": 64, "recall_ann_at_10": 0.97, "ms_p95": 9.0, "elegido_r04": False},
+        {"ef": 128, "recall_ann_at_10": 0.99, "ms_p95": 25.0, "elegido_r04": False},
+    ])
+
+
+def test_un_punto_por_ef_unido_en_orden(barrido_ann):
+    figura = plot_ann_pareto(
+        barrido_ann, recall_minimo=0.90, p95_maximo_ms=20.0,
+        recall_column="recall_ann_at_10",
+    )
+
+    assert list(figura.data[0].x) == [5.0, 7.0, 9.0, 25.0]
+    assert list(figura.data[0].text) == ["16", "32", "64", "128"]
+
+
+def test_el_elegido_se_distingue_por_color(barrido_ann):
+    figura = plot_ann_pareto(
+        barrido_ann, recall_minimo=0.90, p95_maximo_ms=20.0,
+        recall_column="recall_ann_at_10",
+    )
+
+    colores = list(figura.data[0].marker.color)
+    assert colores[1] != colores[0]            # ef=32, el elegido
+    assert colores[0] == colores[2] == colores[3]
+
+
+def test_la_region_sombreada_es_la_interseccion_de_d16(barrido_ann):
+    figura = plot_ann_pareto(
+        barrido_ann, recall_minimo=0.90, p95_maximo_ms=20.0,
+        recall_column="recall_ann_at_10",
+    )
+    region = next(f for f in figura.layout.shapes if f.type == "rect")
+
+    assert region.x0 == 0 and region.x1 == pytest.approx(20.0)
+    assert region.y0 == pytest.approx(0.90)
+
+
+def test_sin_columna_elegida_no_falla_y_no_distingue_ninguna(barrido_ann):
+    sin_eleccion = barrido_ann.drop(columns=["elegido_r04"])
+
+    figura = plot_ann_pareto(
+        sin_eleccion, recall_minimo=0.90, p95_maximo_ms=20.0,
+        recall_column="recall_ann_at_10",
+    )
+
+    assert len(set(figura.data[0].marker.color)) == 1
+
+
+def test_avisa_si_falta_una_columna(barrido_ann):
+    with pytest.raises(ValueError, match="faltan columnas"):
+        plot_ann_pareto(
+            barrido_ann.drop(columns=["ms_p95"]), recall_minimo=0.9,
+            p95_maximo_ms=20.0, recall_column="recall_ann_at_10",
+        )
+
+
+def test_avisa_si_el_barrido_esta_vacio():
+    vacio = pd.DataFrame(columns=["ef", "recall_ann_at_10", "ms_p95"])
+
+    with pytest.raises(ValueError, match="no tiene filas"):
+        plot_ann_pareto(
+            vacio, recall_minimo=0.9, p95_maximo_ms=20.0,
+            recall_column="recall_ann_at_10",
+        )
+
+
+# ───────────────────────── plot_duplicate_threshold_sweep ─────────────────────
+
+
+@pytest.fixture
+def barrido_duplicados() -> pd.DataFrame:
+    return pd.DataFrame([
+        {"umbral_texto_solo": 0.9, "margen_minimo": 0.1, "umbral_texto_corroborado": 0.5,
+         "fp": 1, "precision": 0.88, "recall": 0.8, "cumple_d22": True, "elegido_r05": False},
+        {"umbral_texto_solo": 0.8, "margen_minimo": 0.1, "umbral_texto_corroborado": 0.5,
+         "fp": 2, "precision": 0.78, "recall": 1.0, "cumple_d22": True, "elegido_r05": True},
+        {"umbral_texto_solo": 0.7, "margen_minimo": 0.1, "umbral_texto_corroborado": 0.5,
+         "fp": 5, "precision": 0.58, "recall": 1.0, "cumple_d22": False, "elegido_r05": False},
+    ])
+
+
+def test_un_punto_por_combinacion(barrido_duplicados):
+    figura = plot_duplicate_threshold_sweep(barrido_duplicados, max_fp=2)
+
+    assert list(figura.data[0].x) == [0.88, 0.78, 0.58]
+    assert list(figura.data[0].y) == [0.8, 1.0, 1.0]
+
+
+def test_el_elegido_y_los_que_no_cumplen_se_distinguen_por_color(barrido_duplicados):
+    figura = plot_duplicate_threshold_sweep(barrido_duplicados, max_fp=2)
+
+    colores = list(figura.data[0].marker.color)
+    assert colores[1] != colores[0]            # elegido, distinto del que solo cumple
+    assert colores[2] != colores[0]            # no cumple el suelo, distinto de ambos
+    assert len(set(colores)) == 3
+
+
+def test_sin_columna_elegida_no_falla_y_no_distingue_el_ganador(barrido_duplicados):
+    sin_eleccion = barrido_duplicados.drop(columns=["elegido_r05"])
+
+    figura = plot_duplicate_threshold_sweep(sin_eleccion, max_fp=2)
+
+    colores = list(figura.data[0].marker.color)
+    assert colores[0] == colores[1]            # ambos cumplen, ninguno marcado elegido
+    assert colores[2] != colores[0]            # el que no cumple sigue distinguiéndose
+
+
+def test_avisa_si_falta_una_columna_del_barrido_de_duplicados(barrido_duplicados):
+    with pytest.raises(ValueError, match="faltan columnas"):
+        plot_duplicate_threshold_sweep(
+            barrido_duplicados.drop(columns=["recall"]), max_fp=2
+        )
+
+
+def test_avisa_si_el_barrido_de_duplicados_esta_vacio():
+    vacio = pd.DataFrame(columns=["precision", "recall", "cumple_d22"])
+
+    with pytest.raises(ValueError, match="no tiene filas"):
+        plot_duplicate_threshold_sweep(vacio, max_fp=2)
